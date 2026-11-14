@@ -9,6 +9,7 @@
 <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
 {%- endblock head %}
 <link rel="stylesheet" href="{{ get_url(path='style.css', cachebust=true) | replace(from=config.base_url, to='') }}">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
@@ -38,7 +39,7 @@
     <div>
       <p class="footer-brand">WasmKeep</p>
       <p>Open source under the Apache License 2.0. Pre-alpha: measured, not yet production-ready.</p>
-      <p>This site is a WasmKeep app: <a href="{{ config.extra.source }}">its source</a>. No cookies, no tracking.</p>
+      <p>This site is built as a WasmKeep app (<a href="{{ config.extra.source }}">source</a>). No cookies, no tracking.</p>
     </div>
     <ul class="footer-links" aria-label="Learn">
       <li><a href="/how-it-works/">How it works</a></li>
@@ -58,6 +59,7 @@
     <p>Cloudflare, Durable Objects and the other product names on this site belong to their owners, named only to describe and compare. WasmKeep is not affiliated with or endorsed by any of them.</p>
   </div>
 </footer>
+<script src="{{ get_url(path='copy.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
 {% block scripts %}{% endblock scripts %}
 </body>
 </html>

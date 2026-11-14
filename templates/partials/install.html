@@ -1,0 +1,9 @@
+<pre class="term" data-copy tabindex="0" aria-label="Install commands"><code>v={{ config.extra.release }}
+a=$(uname -m)-unknown-linux-gnu
+f=wasmkeep-$v-$a.tar.gz
+u=https://github.com/WasmKeep/wasmkeep
+curl -fsSLO "$u/releases/download/v$v/$f"
+tar xzf "$f" &amp;&amp; d=${f%.tar.gz}
+sudo install -m 755 "$d/wasmkeep" \
+  /usr/local/bin/wasmkeep
+wasmkeep --version</code></pre>

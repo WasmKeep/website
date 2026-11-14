@@ -73,7 +73,8 @@ for page in how-it-works features compare cost get-started; do
 done
 check "GET /how-it-works redirects" "$(status "$base/how-it-works")" 308
 check "the cost page lists dated prices" "$(curl -fs "$base/cost/" | grep -c 'read on 2026-11-14')" 1
-for js in tabs.js wall.js; do
+check "GET /favicon.ico" "$(header content-type "$base/favicon.ico")" "image/x-icon"
+for js in tabs.js wall.js failover.js copy.js; do
   url=$(grep -o "/$js?h=[0-9a-f]*" <<<"$home" | head -1)
   check "the home page loads $js" "$(header content-type "$base$url")" "text/javascript; charset=utf-8"
 done

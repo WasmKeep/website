@@ -6,27 +6,23 @@
 {%- set v = config.extra.release -%}
 <header class="wrap page-head">
   <h1>Get started</h1>
-  <p class="lead">From nothing to a counter that survives a restart in three commands, then your first actor in your language. The tutorials in the documentation take it from there.</p>
+  <p class="lead">From nothing to a counter that survives a restart, with no toolchain, then your first actor in your language. The tutorials in the documentation take it from there.</p>
 </header>
 <div class="wrap rail rail-rev">
   <ol class="steps">
     <li>
       <h2>Install the binary</h2>
       <p>On Linux, x86_64 or aarch64 (glibc 2.28 or newer). Name the version: releases are pre-releases for now, so there is no <code>latest</code>.</p>
-      <pre class="term" tabindex="0"><code>v={{ v }}
-f=wasmkeep-$v-$(uname -m)-unknown-linux-gnu.tar.gz
-curl -fsSLO "https://github.com/WasmKeep/wasmkeep/releases/download/v$v/$f"
-tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/bin/wasmkeep
-wasmkeep --version</code></pre>
+      {% include "partials/install.html" %}
       <p class="small">Every file of a release is signed: <a href="{{ docs }}/deploy/single-node.html">check a download</a> before you trust it. On macOS and Windows, use the image <code>ghcr.io/wasmkeep/wasmkeep:{{ v }}</code> or build from source.</p>
     </li>
     <li>
       <h2>Serve the counter</h2>
-      <p>A release carries the counter example already built and signed, so this needs no toolchain.</p>
-      <pre class="term" tabindex="0"><code>curl -fsSLO "https://github.com/WasmKeep/wasmkeep/releases/download/v$v/counter.wasm"
+      <p>A release carries the counter example already built and signed, so this needs no toolchain. In the same shell as step 1, which set <code>$u</code> and <code>$v</code>:</p>
+      <pre class="term" data-copy tabindex="0"><code>curl -fsSLO "$u/releases/download/v$v/counter.wasm"
 wasmkeep serve --actor counter=counter.wasm</code></pre>
       <p>In another terminal:</p>
-      <pre class="term" tabindex="0"><code>curl -X POST localhost:8080/actor/counter/alice   <span class="cm"># 1</span>
+      <pre class="term" data-copy tabindex="0"><code>curl -X POST localhost:8080/actor/counter/alice   <span class="cm"># 1</span>
 curl -X POST localhost:8080/actor/counter/alice   <span class="cm"># 2</span>
 curl localhost:8080/actor/counter/bob             <span class="cm"># 0, a separate actor</span></code></pre>
       <p>Each name is its own actor with its own SQLite database under <code>.wasmkeep/data/</code>. Restart the server and the counts are still there.</p>
@@ -65,8 +61,8 @@ curl localhost:8080/actor/counter/bob             <span class="cm"># 0, a separa
       <p><a href="{{ config.extra.tree }}/deploy/compose">deploy/compose</a></p>
     </div>
     <div class="callout">
-      <h3>This site is an example</h3>
-      <p>A Rust front that serves these pages and calls one counter actor per language. Its source is a complete WasmKeep app.</p>
+      <h3>This site's source is an example</h3>
+      <p>The site is built as a WasmKeep app: a Rust front that serves the pages and calls a counter actor. Its source is a complete app.</p>
       <p><a href="{{ config.extra.source }}">WasmKeep/website</a></p>
     </div>
     <div class="callout">
