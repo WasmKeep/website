@@ -27,89 +27,89 @@
       <tbody>
         <tr class="us">
           <th scope="row">WasmKeep</th>
-          <td>Actors, one per name, one event at a time. Any WASI 0.2 component: SDKs for Rust, TypeScript, Python, C, Zig, Go (TinyGo); standard Go, D, MoonBit experimental.</td>
-          <td>One SQLite database per actor on its node's disk, replicated to your S3-compatible bucket.</td>
-          <td><code>exec-durable</code>: once the bucket holds it. Plain <code>exec</code>: once committed locally, uploaded right after the event.</td>
-          <td>Yes, only: one binary per node, nodes share a bucket.</td>
-          <td>Apache-2.0</td>
-          <td>Pre-alpha, 0.4.1 (pre-release).</td>
+          <td data-label="Model and languages">Actors, one per name, one event at a time. Any WASI 0.2 component: SDKs for Rust, TypeScript, Python, C, Zig, Go (TinyGo); standard Go, D, MoonBit experimental.</td>
+          <td data-label="Where state lives">One SQLite database per actor on its node's disk, replicated to your S3-compatible bucket.</td>
+          <td data-label="When a write is acknowledged"><code>exec-durable</code>: once the bucket holds it. Plain <code>exec</code>: once committed locally, uploaded right after the event.</td>
+          <td data-label="Run it yourself">Yes, only: one binary per node, nodes share a bucket.</td>
+          <td data-label="Licence">Apache-2.0</td>
+          <td data-label="Maturity">Pre-alpha, 0.4.1 (pre-release).</td>
         </tr>
         <tr>
           <th scope="row">Cloudflare Durable Objects</th>
-          <td>One object per id, on Workers. JavaScript, TypeScript and Python; other languages through a shim to a JavaScript class.</td>
-          <td>A SQLite database embedded in each object, on Cloudflare's network; 10 GB per object on Workers Paid.</td>
-          <td>Writes go to a buffer flushed to disk; an output gate holds outgoing messages until earlier writes are confirmed flushed.</td>
-          <td>The platform is Cloudflare's. workerd, its open-source runtime, serves Durable Objects locally, with a cluster mode marked experimental.</td>
-          <td>Managed service; workerd is Apache-2.0.</td>
-          <td>Generally available since 2021; SQLite storage GA in April 2025.</td>
+          <td data-label="Model and languages">One object per id, on Workers. JavaScript, TypeScript and Python; other languages through a shim to a JavaScript class.</td>
+          <td data-label="Where state lives">A SQLite database embedded in each object, on Cloudflare's network; 10 GB per object on Workers Paid.</td>
+          <td data-label="When a write is acknowledged">Writes go to a buffer flushed to disk; an output gate holds outgoing messages until earlier writes are confirmed flushed.</td>
+          <td data-label="Run it yourself">The platform is Cloudflare's. workerd, its open-source runtime, serves Durable Objects locally, with a cluster mode marked experimental.</td>
+          <td data-label="Licence">Managed service; workerd is Apache-2.0.</td>
+          <td data-label="Maturity">Generally available since 2021; SQLite storage GA in April 2025.</td>
         </tr>
         <tr>
           <th scope="row">celld</th>
-          <td>Wrangler bundles on V8 (Workers, Durable Objects, KV, Queues, D1, R2, Workflows) from your <code>wrangler.json</code>.</td>
-          <td>Each object a "cell" with its own SQLite database; long-term state in your S3, GCS or Azure bucket.</td>
-          <td>One node: once the bucket has it. Two or more: once one or two other nodes hold it on disk; the bucket upload follows.</td>
-          <td>Yes: a daemon on your machines.</td>
-          <td>Apache-2.0</td>
-          <td>v0.6.3, which its docs call a beta release. Pull requests disabled; patches by email under a CLA.</td>
+          <td data-label="Model and languages">Wrangler bundles on V8 (Workers, Durable Objects, KV, Queues, D1, R2, Workflows) from your <code>wrangler.json</code>.</td>
+          <td data-label="Where state lives">Each object a "cell" with its own SQLite database; long-term state in your S3, GCS or Azure bucket.</td>
+          <td data-label="When a write is acknowledged">One node: once the bucket has it. Two or more: once one or two other nodes hold it on disk; the bucket upload follows.</td>
+          <td data-label="Run it yourself">Yes: a daemon on your machines.</td>
+          <td data-label="Licence">Apache-2.0</td>
+          <td data-label="Maturity">v0.6.3, which its docs call a beta release. Pull requests disabled; patches by email under a CLA.</td>
         </tr>
         <tr>
           <th scope="row">Rivet</th>
-          <td>Actors: long-lived processes with in-memory state, SQLite, WebSockets and scheduling. RivetKit for TypeScript and Rust; Python and Swift experimental.</td>
-          <td>Its site says each actor's data lives in a bucket you own; its state docs also mention a durable volume.</td>
-          <td>"every committed write is replicated before it is acknowledged"; in-memory <code>vars</code> are never persisted.</td>
-          <td>Yes: Docker, Kubernetes or a VM.</td>
-          <td>Apache-2.0</td>
-          <td>v3.1.1 (November 2026).</td>
+          <td data-label="Model and languages">Actors: long-lived processes with in-memory state, SQLite, WebSockets and scheduling. RivetKit for TypeScript and Rust; Python and Swift experimental.</td>
+          <td data-label="Where state lives">Its site says each actor's data lives in a bucket you own; its state docs also mention a durable volume.</td>
+          <td data-label="When a write is acknowledged">"every committed write is replicated before it is acknowledged"; in-memory <code>vars</code> are never persisted.</td>
+          <td data-label="Run it yourself">Yes: Docker, Kubernetes or a VM.</td>
+          <td data-label="Licence">Apache-2.0</td>
+          <td data-label="Maturity">v3.1.1 (November 2026).</td>
         </tr>
         <tr>
           <th scope="row">Golem</th>
-          <td>Durable agents as WebAssembly components: Rust, TypeScript, Scala and MoonBit.</td>
-          <td>An append-only oplog per agent, on Redis, PostgreSQL or SQLite, archived to S3 or a filesystem; recovery replays it.</td>
-          <td>Not stated on the pages we read.</td>
-          <td>Yes: a single binary, your infrastructure, or Golem Cloud.</td>
-          <td>Business Source License 1.1, Apache-2.0 four years after each release.</td>
-          <td>v1.6.3 (November 2026).</td>
+          <td data-label="Model and languages">Durable agents as WebAssembly components: Rust, TypeScript, Scala and MoonBit.</td>
+          <td data-label="Where state lives">An append-only oplog per agent, on Redis, PostgreSQL or SQLite, archived to S3 or a filesystem; recovery replays it.</td>
+          <td data-label="When a write is acknowledged">Not stated on the pages we read.</td>
+          <td data-label="Run it yourself">Yes: a single binary, your infrastructure, or Golem Cloud.</td>
+          <td data-label="Licence">Business Source License 1.1, Apache-2.0 four years after each release.</td>
+          <td data-label="Maturity">v1.6.3 (November 2026).</td>
         </tr>
         <tr>
           <th scope="row">Microsoft Orleans</th>
-          <td>Virtual actors ("grains") in .NET.</td>
-          <td>A storage provider you choose: ADO.NET databases, Azure Storage, Cosmos DB, DynamoDB, Redis and others.</td>
-          <td>When <code>WriteStateAsync</code> completes; a storage failure throws from it. State is not persisted until you call it.</td>
-          <td>Yes: wherever .NET runs, including Kubernetes.</td>
-          <td>MIT</td>
-          <td>Used at Microsoft in Azure, Xbox and others; v10.4.2.</td>
+          <td data-label="Model and languages">Virtual actors ("grains") in .NET.</td>
+          <td data-label="Where state lives">A storage provider you choose: ADO.NET databases, Azure Storage, Cosmos DB, DynamoDB, Redis and others.</td>
+          <td data-label="When a write is acknowledged">When <code>WriteStateAsync</code> completes; a storage failure throws from it. State is not persisted until you call it.</td>
+          <td data-label="Run it yourself">Yes: wherever .NET runs, including Kubernetes.</td>
+          <td data-label="Licence">MIT</td>
+          <td data-label="Maturity">Used at Microsoft in Azure, Xbox and others; v10.4.2.</td>
         </tr>
         <tr>
           <th scope="row">Dapr actors</th>
-          <td>Turn-based actors behind a sidecar. Actor SDKs for .NET, Python, Java, Go, PHP and JavaScript.</td>
-          <td>One transactional state store you configure for actors.</td>
-          <td>Not stated on the pages we read.</td>
-          <td>Yes: open source.</td>
-          <td>Apache-2.0</td>
-          <td>A CNCF graduated project; v1.19.1.</td>
+          <td data-label="Model and languages">Turn-based actors behind a sidecar. Actor SDKs for .NET, Python, Java, Go, PHP and JavaScript.</td>
+          <td data-label="Where state lives">One transactional state store you configure for actors.</td>
+          <td data-label="When a write is acknowledged">Not stated on the pages we read.</td>
+          <td data-label="Run it yourself">Yes: open source.</td>
+          <td data-label="Licence">Apache-2.0</td>
+          <td data-label="Maturity">A CNCF graduated project; v1.19.1.</td>
         </tr>
         <tr>
           <th scope="row">Temporal</th>
-          <td>Durable execution of workflows. SDKs for Go, Java, Python, TypeScript, .NET, Ruby, PHP and Rust.</td>
-          <td>Each workflow's event history, in the Temporal Service's database: Cassandra, PostgreSQL or MySQL.</td>
-          <td>Not stated as such; the event history is the source of truth that recovery replays.</td>
-          <td>Yes: the Temporal Service is open source.</td>
-          <td>MIT</td>
-          <td>v1.32.2 (November 2026).</td>
+          <td data-label="Model and languages">Durable execution of workflows. SDKs for Go, Java, Python, TypeScript, .NET, Ruby, PHP and Rust.</td>
+          <td data-label="Where state lives">Each workflow's event history, in the Temporal Service's database: Cassandra, PostgreSQL or MySQL.</td>
+          <td data-label="When a write is acknowledged">Not stated as such; the event history is the source of truth that recovery replays.</td>
+          <td data-label="Run it yourself">Yes: the Temporal Service is open source.</td>
+          <td data-label="Licence">MIT</td>
+          <td data-label="Maturity">v1.32.2 (November 2026).</td>
         </tr>
         <tr>
           <th scope="row">Restate</th>
-          <td>Durable execution; Virtual Objects with a single writer per key. SDKs for TypeScript, Java, Kotlin, Python, Go, Rust and Ruby.</td>
-          <td>The Restate Server's log, on disk and replicated, with RocksDB for state; snapshots in S3 for clusters.</td>
-          <td>In a cluster, a majority must accept new log entries; the exact point of the answer is not stated.</td>
-          <td>Yes: a single binary, one node or a cluster.</td>
-          <td>Server: Business Source License 1.1, Apache-2.0 after four years. SDKs: MIT.</td>
-          <td>v1.8.1 (November 2026).</td>
+          <td data-label="Model and languages">Durable execution; Virtual Objects with a single writer per key. SDKs for TypeScript, Java, Kotlin, Python, Go, Rust and Ruby.</td>
+          <td data-label="Where state lives">The Restate Server's log, on disk and replicated, with RocksDB for state; snapshots in S3 for clusters.</td>
+          <td data-label="When a write is acknowledged">In a cluster, a majority must accept new log entries; the exact point of the answer is not stated.</td>
+          <td data-label="Run it yourself">Yes: a single binary, one node or a cluster.</td>
+          <td data-label="Licence">Server: Business Source License 1.1, Apache-2.0 after four years. SDKs: MIT.</td>
+          <td data-label="Maturity">v1.8.1 (November 2026).</td>
         </tr>
       </tbody>
     </table>
   </div>
-  <p class="small">Scroll the table sideways on a narrow screen. Versions are the latest releases on each project's GitHub on 2026-11-14.</p>
+  <p class="small">Versions are the latest releases on each project's GitHub on 2026-11-14.</p>
 </section>
 
 <section class="band" aria-labelledby="picks-title">

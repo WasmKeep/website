@@ -967,7 +967,37 @@ code {
 .cmp {
   border-collapse: collapse;
   width: 100%;
-  min-width: 62rem;
+  @media (min-width: 48rem) {
+    min-width: 62rem;
+  }
+  // On a phone each project is a card: its cells stack, each with its label.
+  @media (max-width: 47.99rem) {
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    tr,
+    th,
+    td {
+      display: block;
+    }
+    tbody tr {
+      border-bottom: 2px solid var(--rule-strong);
+    }
+    td {
+      border-bottom: 1px dashed var(--rule) !important;
+    }
+    td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+  }
   font-size: 0.9rem;
   th,
   td {

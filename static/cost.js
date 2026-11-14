@@ -321,7 +321,7 @@
     }
     charts.append(panel("Monthly bill in US$", "USD", usdSeries, w, cross));
     if (!allUsd) {
-      charts.append(panel("Monthly bill in euros", "EUR", [{ label: "WasmKeep, its euro part", ys: selfEur }], w, null));
+      charts.append(panel("Monthly bill in euros", "EUR", [{ label: selfUsd.some((y) => y > 0) ? "WasmKeep, its euro part" : "WasmKeep, self-hosted", ys: selfEur }], w, null));
     }
 
     const table = $("sweep-table");
