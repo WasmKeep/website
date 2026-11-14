@@ -1343,9 +1343,14 @@ code {
   margin-bottom: 1rem;
 }
 
-.sim > svg {
+.sim-scroll {
+  overflow-x: auto;
+}
+
+.sim-scroll > svg {
   display: block;
   width: 100%;
+  min-width: 600px;
   height: auto;
 }
 

@@ -8,7 +8,9 @@
   <p class="lead">{{ page.extra.lead }}</p>
   {%- endif %}
 </header>
-<article class="wrap prose">
+<div class="wrap">
+<article class="prose">
   {{ page.content | safe }}
 </article>
+</div>
 {% endblock content %}

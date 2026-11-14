@@ -13,6 +13,7 @@
   <h2 id="sim-title">Kill a node</h2>
   <p class="small">Three nodes, six actors. Stop a node and watch its lease run out, then another node take its actors from the bucket. The clock runs five times faster than real time; the timings it shows are the defaults and the measured medians, not a live cluster.</p>
   <div class="sim" id="sim">
+    <div class="sim-scroll" tabindex="0" role="region" aria-label="The diagram; scroll sideways on a narrow screen">
     <svg viewBox="0 0 760 440" role="img" aria-labelledby="sim-svg-title sim-svg-desc" xmlns="http://www.w3.org/2000/svg">
       <title id="sim-svg-title">Three WasmKeep nodes on one bucket</title>
       <desc id="sim-svg-desc">A load balancer spreads requests over nodes a, b and c. Each node runs the front and holds two actors, each with its own SQLite database. The nodes talk mutual TLS to each other and replicate every database to one S3-compatible bucket, which also holds each node's lease.</desc>
@@ -56,6 +57,7 @@
       {%- endfor %}
       <circle class="dg-packet" r="6" cx="-20" cy="-20" data-packet/>
     </svg>
+    </div>
     <div class="sim-controls" data-controls hidden>
       <button type="button" class="kill" data-kill="a">{{<icon name="x" />}}Kill node a</button>
       <button type="button" class="kill" data-kill="b">{{<icon name="x" />}}Kill node b</button>
