@@ -1,0 +1,44 @@
+# Zola configuration (https://www.getzola.org/documentation/getting-started/configuration/).
+# `zola build` writes the site to public/, which the front embeds
+# (front/build.rs). Templates link with root-relative paths, so the same
+# build serves under `wasmkeep dev` and in production; base_url is used
+# only for the sitemap and canonical links.
+base_url = "https://wasmkeep.dev"
+title = "WasmKeep"
+description = "Many small stateful actors, in any language that compiles to WebAssembly, on servers you own."
+default_language = "en"
+compile_sass = true
+minify_html = true
+build_search_index = false
+generate_feeds = false
+
+[markdown]
+smart_punctuation = true
+
+[extra]
+docs = "https://docs.wasmkeep.dev"
+github = "https://github.com/WasmKeep/wasmkeep"
+source = "https://github.com/WasmKeep/website"
+
+# The language wall, in display order. `class` is the actor class of that
+# language's counter (wasmkeep.toml), checked by the front against the
+# same fixed list (front/src/wall.rs). A language whose counter is not
+# deployed shows as "soon".
+wall = [
+  { class = "rust", name = "Rust" },
+  { class = "typescript", name = "TypeScript" },
+  { class = "python", name = "Python" },
+  { class = "go", name = "Go" },
+  { class = "c", name = "C" },
+  { class = "zig", name = "Zig" },
+  { class = "d", name = "D" },
+  { class = "moonbit", name = "MoonBit" },
+  { class = "csharp", name = "C#" },
+]
+
+menu = [
+  { name = "How it works", path = "/how-it-works/" },
+  { name = "Features", path = "/features/" },
+  { name = "Compare", path = "/compare/" },
+  { name = "Get started", path = "/get-started/" },
+]

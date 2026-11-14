@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+{%- block head %}
+<title>{% block title %}{{ config.title }}{% endblock title %}</title>
+<meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
+{%- endblock head %}
+<link rel="stylesheet" href="{{ get_url(path='style.css', cachebust=true) | replace(from=config.base_url, to='') }}">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <nav class="wrap nav" aria-label="Main">
+    <a class="brand" href="/">WasmKeep</a>
+    <ul>
+      {%- for item in config.extra.menu %}
+      <li><a href="{{ item.path }}"{% if (current_path or "") == item.path %} aria-current="page"{% endif %}>{{ item.name }}</a></li>
+      {%- endfor %}
+      <li><a href="{{ config.extra.docs }}">Docs</a></li>
+      <li><a href="{{ config.extra.github }}">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+<main id="main" class="wrap">
+{% block content %}{% endblock content %}
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <p>WasmKeep is open source under the Apache License 2.0. This site is a WasmKeep app; <a href="{{ config.extra.source }}">its source</a>. No cookies, no tracking.</p>
+  </div>
+</footer>
+{% block scripts %}{% endblock scripts %}
+</body>
+</html>

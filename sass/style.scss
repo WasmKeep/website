@@ -1,0 +1,393 @@
+// The site's only stylesheet: no web fonts, no framework. Colours are
+// tokens on :root, redefined for a dark colour scheme.
+
+:root {
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --text: #1b1d21;
+  --muted: #565b64;
+  --border: #d9dce1;
+  --accent: #5b3fd1;
+  --accent-text: #ffffff;
+  --accent-soft: #ece8fb;
+  --focus: #1a73e8;
+  --code-bg: #f0f1f3;
+  --radius: 10px;
+  --wrap: 68rem;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111317;
+    --surface: #191c21;
+    --text: #e8eaed;
+    --muted: #a3a9b3;
+    --border: #2f343c;
+    --accent: #a593ff;
+    --accent-text: #111317;
+    --accent-soft: #262040;
+    --focus: #8ab4f8;
+    --code-bg: #20242a;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 1.0625rem/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.15em;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+code {
+  font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.wrap {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.skip {
+  position: absolute;
+  left: -999px;
+  &:focus {
+    left: 1rem;
+    top: 1rem;
+    background: var(--surface);
+    padding: 0.5rem 1rem;
+    z-index: 10;
+  }
+}
+
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+// Header and footer
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.1rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  a {
+    color: var(--muted);
+    text-decoration: none;
+    &:hover,
+    &[aria-current="page"] {
+      color: var(--text);
+      text-decoration: underline;
+    }
+  }
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text) !important;
+}
+
+.site-footer {
+  margin-top: 4rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 1.5rem 0;
+}
+
+main {
+  padding-top: 2rem;
+}
+
+h1,
+h2 {
+  line-height: 1.2;
+}
+
+// Home
+
+.hero {
+  padding: 2rem 0 1rem;
+  max-width: 46rem;
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    margin: 0 0 1.25rem;
+  }
+}
+
+.lead {
+  font-size: 1.15rem;
+  margin: 0.25rem 0;
+}
+
+.status {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  &.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+  }
+}
+
+.wall {
+  margin-top: 3rem;
+}
+
+.wall-grid {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.wall-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  form {
+    margin: 0;
+  }
+  button {
+    font: inherit;
+    font-weight: 600;
+    padding: 0.35rem 0.9rem;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--text);
+    cursor: pointer;
+    &:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+  }
+}
+
+.wall-name {
+  font-weight: 600;
+}
+
+.wall-count {
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.wall-soon {
+  color: var(--muted);
+}
+
+.wall-status,
+.wall-note {
+  color: var(--muted);
+  font-size: 0.95rem;
+  min-height: 1.5em;
+}
+
+.links {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+}
+
+// Pages
+
+.prose {
+  max-width: 46rem;
+  h2 {
+    margin-top: 2rem;
+  }
+}
+
+h2.feature {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.2rem;
+  margin: 2rem 0 0.25rem;
+  .icon {
+    color: var(--accent);
+  }
+}
+
+// The cluster diagram: colours from the tokens, so it follows the scheme.
+
+.diagram {
+  margin: 1.5rem 0 2rem;
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  figcaption {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+  }
+}
+
+.dg-box {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.dg-accent {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+
+.dg-bucket {
+  fill: var(--code-bg);
+  stroke: var(--muted);
+}
+
+.dg-node {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.dg-db {
+  fill: var(--code-bg);
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+
+.dg-line {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+
+.dg-dash {
+  stroke-dasharray: 4 4;
+}
+
+.dg-call {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.dg-head {
+  fill: var(--muted);
+}
+
+.dg-text,
+.dg-small,
+.dg-label {
+  fill: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.dg-text {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dg-small {
+  font-size: 12px;
+}
+
+.dg-label {
+  font-size: 12px;
+  fill: var(--muted);
+}
+
+.dg-callt {
+  fill: var(--accent);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wall-count.bumped {
+    animation: bump 0.4s ease-out;
+  }
+}
+
+@keyframes bump {
+  from {
+    color: var(--accent);
+  }
+}

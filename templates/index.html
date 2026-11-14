@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Stateful actors in any language, on servers you own.</h1>
+  <p class="lead">WasmKeep runs many small actors, each a WebAssembly component with its own SQLite database.</p>
+  <p class="lead">Idle actors leave memory and wake in about a millisecond; one event at a time, no locks.</p>
+  <p class="lead">Nodes share an object storage bucket, so an actor's data outlives the node it ran on.</p>
+  <p class="actions">
+    <a class="button primary" href="{{ config.extra.docs }}/tutorials/first-actor.html">{{<icon name="book" />}}<span>Read the docs</span></a>
+    <a class="button" href="{{ config.extra.github }}">{{<icon name="code" />}}<span>Source on GitHub</span></a>
+  </p>
+  <p class="status">Pre-alpha: measured, not yet production-ready. <a href="{{ config.extra.docs }}/overview.html">What works today</a>.</p>
+</section>
+
+<section id="wall" class="wall" aria-labelledby="wall-title">
+  <h2 id="wall-title">The language wall</h2>
+  <p>Each tile is a counter actor written in that language, called by this site's front. Add one: the count is stored in that actor's own database.</p>
+  <ul class="wall-grid">
+    {%- for lang in config.extra.wall %}
+    <li class="wall-item" data-lang="{{ lang.class }}">
+      <span class="wall-name">{{ lang.name }}</span>
+      %wall:{{ lang.class }}%
+    </li>
+    {%- endfor %}
+  </ul>
+  <p class="wall-status" role="status" aria-live="polite"></p>
+  <p class="wall-note">Languages marked "soon" join the wall when a WasmKeep release publishes their counter. <code>GET /api/wall</code> reads every counter with one batch of calls.</p>
+</section>
+
+<section class="next">
+  <h2>Next</h2>
+  <ul class="links">
+    <li><a href="/how-it-works/">{{<icon name="arrow" />}}<span>How it works</span></a></li>
+    <li><a href="/features/">{{<icon name="arrow" />}}<span>Features</span></a></li>
+    <li><a href="/compare/">{{<icon name="arrow" />}}<span>Compare</span></a></li>
+    <li><a href="/get-started/">{{<icon name="arrow" />}}<span>Get started</span></a></li>
+  </ul>
+</section>
+{% endblock content %}
+{% block scripts %}
+<script src="{{ get_url(path='wall.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
+{% endblock scripts %}

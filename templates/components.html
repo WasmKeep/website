@@ -1,0 +1,96 @@
+{#- The site's components (Tera 2, Zola 0.23): no import needed. -#}
+
+{#- Inline SVG icons, drawn for this site (24x24, stroked with the text
+    colour). Decorative: aria-hidden; the text next to each says what it is. -#}
+{% component icon(name: string) %}
+<svg class="icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+{%- if name == "database" -%}
+<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>
+{%- elif name == "moon" -%}
+<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>
+{%- elif name == "languages" -%}
+<path d="M8 6 2 12l6 6"/><path d="m16 6 6 6-6 6"/><path d="m14 4-4 16"/>
+{%- elif name == "layers" -%}
+<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>
+{%- elif name == "clock" -%}
+<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{%- elif name == "cloud" -%}
+<path d="M7 19h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 10.5 4.3 4.3 0 0 0 7 19z"/>
+{%- elif name == "server" -%}
+<rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/>
+{%- elif name == "shield" -%}
+<path d="M12 3 4 6v6c0 4.4 3.4 8 8 9 4.6-1 8-4.6 8-9V6z"/><path d="m9 12 2 2 4-4"/>
+{%- elif name == "book" -%}
+<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v16H5.5A1.5 1.5 0 0 0 4 20.5z"/><path d="M4 20.5A1.5 1.5 0 0 0 5.5 22H20"/>
+{%- elif name == "code" -%}
+<path d="m9 8-5 4 5 4"/><path d="m15 8 5 4-5 4"/>
+{%- elif name == "arrow" -%}
+<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>
+{%- endif -%}
+</svg>
+{%- endcomponent icon %}
+
+{#- A feature's heading, with its icon; the text follows in Markdown. -#}
+{% component feature(icon: string, title: string) %}
+<h2 class="feature">{{<icon name={icon} />}} {{ title }}</h2>
+{%- endcomponent feature %}
+
+{#- The cluster diagram of "How it works". Colours come from CSS classes
+    (sass/style.scss), so it follows the light or dark scheme. -#}
+{% component cluster_diagram() %}
+<figure class="diagram">
+<svg viewBox="0 0 720 560" role="img" aria-labelledby="dg-title dg-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="dg-title">A WasmKeep cluster</title>
+<desc id="dg-desc">Clients reach a load balancer, which spreads requests over three nodes. Each node runs the same front. Any front calls any actor, on any node. Actors of the same classes, counter and room, run across the nodes, each with its own SQLite database. Every database is replicated to one object storage bucket.</desc>
+<defs><marker id="dg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-head" d="M0 0 10 5 0 10z"/></marker></defs>
+<rect class="dg-box" x="150" y="10" width="90" height="34" rx="6"/><text class="dg-text" x="195" y="32" text-anchor="middle">Client</text>
+<path class="dg-line" d="M195 44V78" marker-end="url(#dg-arrow)"/>
+<rect class="dg-box" x="315" y="10" width="90" height="34" rx="6"/><text class="dg-text" x="360" y="32" text-anchor="middle">Client</text>
+<path class="dg-line" d="M360 44V78" marker-end="url(#dg-arrow)"/>
+<rect class="dg-box" x="480" y="10" width="90" height="34" rx="6"/><text class="dg-text" x="525" y="32" text-anchor="middle">Client</text>
+<path class="dg-line" d="M525 44V78" marker-end="url(#dg-arrow)"/>
+<rect class="dg-box dg-accent" x="120" y="82" width="480" height="38" rx="6"/><text class="dg-text" x="360" y="106" text-anchor="middle">Load balancer</text>
+<path class="dg-line" d="M125.0 120V158" marker-end="url(#dg-arrow)"/>
+<rect class="dg-node" x="20" y="162" width="210" height="274" rx="10"/><text class="dg-label" x="32" y="182">Node 1</text>
+<rect class="dg-box dg-accent" x="40" y="194" width="170" height="36" rx="6"/><text class="dg-text" x="125.0" y="217" text-anchor="middle">Front</text>
+<rect class="dg-box" x="34" y="286" width="86" height="40" rx="6"/><text class="dg-small" x="77" y="311" text-anchor="middle">counter/a</text>
+<path class="dg-line" d="M77 326V342"/>
+<path class="dg-db" d="M55 352v30c0 4 10 7 22 7s22-3 22-7v-30"/><ellipse class="dg-db" cx="77" cy="352" rx="22" ry="7"/>
+<text class="dg-small" x="77" y="378" text-anchor="middle">SQLite</text>
+<rect class="dg-box" x="130" y="286" width="86" height="40" rx="6"/><text class="dg-small" x="173" y="311" text-anchor="middle">room/x</text>
+<path class="dg-line" d="M173 326V342"/>
+<path class="dg-db" d="M151 352v30c0 4 10 7 22 7s22-3 22-7v-30"/><ellipse class="dg-db" cx="173" cy="352" rx="22" ry="7"/>
+<text class="dg-small" x="173" y="378" text-anchor="middle">SQLite</text>
+<path class="dg-line dg-dash" d="M125.0 436V488" marker-end="url(#dg-arrow)"/>
+<path class="dg-line" d="M360.0 120V158" marker-end="url(#dg-arrow)"/>
+<rect class="dg-node" x="255" y="162" width="210" height="274" rx="10"/><text class="dg-label" x="267" y="182">Node 2</text>
+<rect class="dg-box dg-accent" x="275" y="194" width="170" height="36" rx="6"/><text class="dg-text" x="360.0" y="217" text-anchor="middle">Front</text>
+<rect class="dg-box" x="269" y="286" width="86" height="40" rx="6"/><text class="dg-small" x="312" y="311" text-anchor="middle">counter/b</text>
+<path class="dg-line" d="M312 326V342"/>
+<path class="dg-db" d="M290 352v30c0 4 10 7 22 7s22-3 22-7v-30"/><ellipse class="dg-db" cx="312" cy="352" rx="22" ry="7"/>
+<text class="dg-small" x="312" y="378" text-anchor="middle">SQLite</text>
+<rect class="dg-box" x="365" y="286" width="86" height="40" rx="6"/><text class="dg-small" x="408" y="311" text-anchor="middle">room/y</text>
+<path class="dg-line" d="M408 326V342"/>
+<path class="dg-db" d="M386 352v30c0 4 10 7 22 7s22-3 22-7v-30"/><ellipse class="dg-db" cx="408" cy="352" rx="22" ry="7"/>
+<text class="dg-small" x="408" y="378" text-anchor="middle">SQLite</text>
+<path class="dg-line dg-dash" d="M360.0 436V488" marker-end="url(#dg-arrow)"/>
+<path class="dg-line" d="M595.0 120V158" marker-end="url(#dg-arrow)"/>
+<rect class="dg-node" x="490" y="162" width="210" height="274" rx="10"/><text class="dg-label" x="502" y="182">Node 3</text>
+<rect class="dg-box dg-accent" x="510" y="194" width="170" height="36" rx="6"/><text class="dg-text" x="595.0" y="217" text-anchor="middle">Front</text>
+<rect class="dg-box" x="504" y="286" width="86" height="40" rx="6"/><text class="dg-small" x="547" y="311" text-anchor="middle">counter/c</text>
+<path class="dg-line" d="M547 326V342"/>
+<path class="dg-db" d="M525 352v30c0 4 10 7 22 7s22-3 22-7v-30"/><ellipse class="dg-db" cx="547" cy="352" rx="22" ry="7"/>
+<text class="dg-small" x="547" y="378" text-anchor="middle">SQLite</text>
+<rect class="dg-box" x="600" y="286" width="86" height="40" rx="6"/><text class="dg-small" x="643" y="311" text-anchor="middle">room/z</text>
+<path class="dg-line" d="M643 326V342"/>
+<path class="dg-db" d="M621 352v30c0 4 10 7 22 7s22-3 22-7v-30"/><ellipse class="dg-db" cx="643" cy="352" rx="22" ry="7"/>
+<text class="dg-small" x="643" y="378" text-anchor="middle">SQLite</text>
+<path class="dg-line dg-dash" d="M595.0 436V488" marker-end="url(#dg-arrow)"/>
+<path class="dg-call" d="M125 230C140 262 560 252 643 283" marker-end="url(#dg-arrow)"/>
+<text class="dg-small dg-callt" x="360" y="248" text-anchor="middle">any front calls any actor</text>
+<text class="dg-small" x="603" y="468">replicated</text>
+<rect class="dg-box dg-bucket" x="120" y="492" width="480" height="44" rx="6"/><text class="dg-text" x="360" y="519" text-anchor="middle">Object storage bucket (S3-compatible)</text>
+</svg>
+<figcaption>Every node runs the same front; actors of the same classes are spread across the nodes, each with its own SQLite database, replicated to one bucket.</figcaption>
+</figure>
+{%- endcomponent cluster_diagram %}
