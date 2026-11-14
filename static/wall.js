@@ -21,7 +21,7 @@
     }
   };
 
-  // "What answered": the actors behind the tiles, from the front's answer.
+  // "Behind the tile": the live actors, from the front's answer.
   const field = (id) => wall.querySelector(`[data-id="${id}"]`);
   const identify = (body) => {
     const entries = body.wall || [];
@@ -30,8 +30,6 @@
       const el = field(id);
       if (el) el.textContent = text;
     };
-    set("live", String(live.length));
-    set("soon", String(entries.filter((e) => e.state === "soon").length));
     set("total", String(live.reduce((sum, e) => sum + (Number(e.count) || 0), 0)));
     const addrs = field("addrs");
     if (addrs) {
@@ -44,8 +42,9 @@
       });
       if (!live.length) addrs.textContent = "none answering";
     }
-    const rows = entries.map((e) => `    ${JSON.stringify(e)}`).join(",\n");
-    set("json", `{\n  "wall": [\n${rows}\n  ],\n  "node": ${JSON.stringify(body.node ?? null)}\n}`);
+    // The front's answer, without the fields this page does not use.
+    const rows = live.map((e) => `    ${JSON.stringify({ lang: e.lang, name: e.name, state: e.state, count: e.count })}`).join(",\n");
+    set("json", `{\n  "wall": [\n${rows}\n  ]\n}`);
   };
 
   const refresh = async () => {
@@ -76,9 +75,7 @@
       const body = await r.json();
       show(body.lang, body.count);
       refresh();
-      status.textContent = body.node
-        ? `${name}: ${body.count}, answered by node ${body.node}.`
-        : `${name}: ${body.count}.`;
+      status.textContent = `${name}: ${body.count}, written to ${body.lang}/wall's own database.`;
     } catch (_) {
       status.textContent = `${name}: that did not go through; try again.`;
     } finally {

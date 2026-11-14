@@ -1,9 +1,9 @@
 {% raw %}<span class="cm">// examples/counter: counter/alice and counter/bob are two actors,</span>
 <span class="cm">// each with its own SQLite database, each one event at a time.</span>
-impl http::Guest for Counter {
-    fn handle(request: IncomingRequest, out: ResponseOutparam) {
-        let result = match request.method() {
-            Method::Get =&gt; storage::query("SELECT value FROM counter WHERE id = 1", &amp;[]),
+<span class="kw">impl</span> http::Guest <span class="kw">for</span> Counter {
+    <span class="kw">fn</span> handle(request: IncomingRequest, out: ResponseOutparam) {
+        <span class="kw">let</span> result = <span class="kw">match</span> request.method() {
+            Method::Get =&gt; storage::query(<span class="st">"SELECT value FROM counter WHERE id = 1"</span>, &amp;[]),
             Method::Post =&gt; increment(),
 <span class="cm">            // ...</span>
         };
@@ -11,16 +11,16 @@ impl http::Guest for Counter {
     }
 }
 
-fn increment() -&gt; Result&lt;storage::Rows, storage::SqlError&gt; {
-    const SQL: &amp;str = "UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value";
-    if cfg!(feature = "durable") {
-        storage::exec("BEGIN", &amp;[])?;
-        let rows = storage::query(SQL, &amp;[])?;
+<span class="kw">fn</span> increment() -&gt; Result&lt;storage::Rows, storage::SqlError&gt; {
+    <span class="kw">const</span> SQL: &amp;str = <span class="st">"UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value"</span>;
+    <span class="kw">if</span> cfg!(feature = <span class="st">"durable"</span>) {
+        storage::exec(<span class="st">"BEGIN"</span>, &amp;[])?;
+        <span class="kw">let</span> rows = storage::query(SQL, &amp;[])?;
 <span class="cm">        // Returns only once the transaction is in the bucket: kill the</span>
 <span class="cm">        // node after this line, and the new count is there on another node.</span>
-        storage::exec_durable("COMMIT", &amp;[])?;
-        Ok(rows)
-    } else {
+        storage::exec_durable(<span class="st">"COMMIT"</span>, &amp;[])?;
+        <span class="kw">Ok</span>(rows)
+    } <span class="kw">else</span> {
 <span class="cm">        // Committed to this actor's SQLite, uploaded right after the</span>
 <span class="cm">        // event: it can be lost with its node in that moment.</span>
         storage::query(SQL, &amp;[])

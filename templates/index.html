@@ -7,19 +7,16 @@
     <h1 id="hero-title">Stateful actors in any language, on servers you own.</h1>
     <p class="lead">WasmKeep runs one small program per room, user, tenant or device. Each is a WebAssembly component with its own SQLite database, handling one event at a time, replicated to a bucket you own.</p>
     <p class="status">{{<icon name="alert" />}}<span><strong>Pre-alpha, {{ config.extra.release }}.</strong> Soaked with nodes killed under load, but not yet carrying real users' traffic. Do not trust it with data you care about yet. <a href="{{ config.extra.docs }}/overview.html">What works today</a>.</span></p>
-    <div class="install">
-      <p class="install-label" id="install-label">Install on Linux (x86_64 or aarch64, glibc 2.28 or newer)</p>
-      <pre class="term" aria-labelledby="install-label" tabindex="0"><code>v={{ config.extra.release }}
-f=wasmkeep-$v-$(uname -m)-unknown-linux-gnu.tar.gz
-curl -fsSLO "https://github.com/WasmKeep/wasmkeep/releases/download/v$v/$f"
-tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/bin/wasmkeep</code></pre>
-      <p class="install-note">Every release file is signed: <a href="{{ config.extra.docs }}/deploy/single-node.html">check a download</a> before you trust it. Or run the image <code>ghcr.io/wasmkeep/wasmkeep:{{ config.extra.release }}</code>.</p>
-    </div>
     <p class="actions">
       <a class="button primary" href="/get-started/">{{<icon name="terminal" />}}<span>Get started</span></a>
       <a class="button" href="{{ config.extra.github }}">{{<icon name="github" />}}<span>GitHub</span></a>
       <a class="button quiet" href="{{ config.extra.docs }}">{{<icon name="book" />}}<span>Docs</span></a>
     </p>
+    <div class="install">
+      <p class="install-label">Install on Linux (x86_64 or aarch64, glibc 2.28 or newer)</p>
+      {% include "partials/install.html" %}
+      <p class="install-note">Every release file is signed: <a href="{{ config.extra.docs }}/deploy/single-node.html">check a download</a> before you trust it. Or run the image <code>ghcr.io/wasmkeep/wasmkeep:{{ config.extra.release }}</code>.</p>
+    </div>
   </div>
 
   <figure class="ledger" aria-labelledby="ledger-cap">
@@ -32,6 +29,40 @@ tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/b
     <div class="ledger-bucket">{{<icon name="bucket" />}}<span>Replicated to your S3-compatible bucket</span></div>
     <figcaption id="ledger-cap">One actor per room, user, tenant or device. An address is a class and a name; each name is its own actor, with its own database, running one event at a time. Idle ones leave memory and wake in about a millisecond.</figcaption>
   </figure>
+</section>
+
+<section class="band" aria-labelledby="why-title">
+  <div class="wrap rail">
+    <div class="rail-head">
+      <h2 id="why-title">Why WasmKeep</h2>
+      <p>The one-object-per-thing model, on your own terms. None of these is unique on its own; together they are what WasmKeep is for.</p>
+      <p><a href="/compare/">How it compares, and when to pick something else</a></p>
+    </div>
+    <ul class="why">
+      <li>
+        <h3>{{<icon name="server" />}}Your servers, any S3-compatible bucket</h3>
+        <p>One binary per node; nodes share a bucket you own. Soaked against Cloudflare R2 and OVHcloud Object Storage with nodes killed under load.</p>
+      </li>
+      <li>
+        <h3>{{<icon name="languages" />}}Any language that compiles to WebAssembly</h3>
+        <p>Actors are standard WASI 0.2 components. Rust, Zig and C cost about the same per request: 104, 107 and 110 µs of server CPU on one workstation.<a class="fn" href="#n3" aria-label="Source 3">3</a></p>
+      </li>
+      <li>
+        <h3>{{<icon name="cloud" />}}Acknowledged only once it is in the bucket</h3>
+        <p>A write made with <code>exec-durable</code> answers after the bucket holds it, so it survives its node: none lost over 239 kills in 12 hours.<a class="fn" href="#n1" aria-label="Source 1">1</a></p>
+      </li>
+      <li>
+        <h3>{{<icon name="check" />}}Apache-2.0, developed in the open</h3>
+        <p>Every number on this site links the CSV the benchmark scripts wrote, including the runs that failed a check. Pull requests are welcome, under a CLA.</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="wrap section demo" aria-labelledby="demo-title">
+  <h2 id="demo-title">Kill a node and watch the takeover</h2>
+  <p class="small">Three nodes, six actors, one bucket: a model of the default timings, five times faster than real time. <a href="/how-it-works/">How it works</a> explains each step.</p>
+  {% set sim_id = "home-sim" %}{% include "partials/sim.html" %}
 </section>
 
 <section class="band" aria-labelledby="code-title">
@@ -63,9 +94,9 @@ tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/b
 
 <section id="wall" class="wrap rail wall" aria-labelledby="wall-title">
   <div class="rail-head">
-    <h2 id="wall-title">Try it: the language wall</h2>
-    <p>Each live tile is an actor behind this page: the counter in that language, its own class, one actor named <code>wall</code>. Add one, and the count is written to that actor's own database.</p>
-    <p class="small">The page's front reads every counter with one batch of calls (<code>GET /api/wall</code>). Languages marked "soon" join when a WasmKeep release publishes their counter.</p>
+    <h2 id="wall-title">Try it: a live actor</h2>
+    <p>The tile is a real actor behind this page: the Rust counter from the examples, one actor named <code>wall</code>. Add one, and the count is written to that actor's own SQLite database.</p>
+    <p class="small">The page's front reads it with a batch of calls (<code>GET /api/wall</code>). The counter in more languages joins when WasmKeep 0.4.2 publishes their components.</p>
   </div>
   <div class="wall-body">
     <ul class="wall-grid">
@@ -79,12 +110,11 @@ tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/b
     </ul>
     <p class="wall-status" role="status" aria-live="polite"></p>
     <div class="identity">
-      <h3>What answered</h3>
+      <h3>Behind the tile</h3>
       <dl class="identity-list">
-        <div><dt>Actors on the wall</dt><dd><span data-id="live">-</span> live, <span data-id="soon">-</span> soon</dd></div>
-        <div><dt>Their addresses</dt><dd data-id="addrs"><code>rust/wall</code></dd></div>
-        <div><dt>Sum of every count</dt><dd data-id="total">-</dd></div>
-        <div><dt>Which node answered</dt><dd>Not shown. WasmKeep 0.4 does not tell a front which node it runs on, so <code>"node"</code> below is <code>null</code>.</dd></div>
+        <div><dt>Actor</dt><dd data-id="addrs"><code>rust/wall</code></dd></div>
+        <div><dt>Stored count</dt><dd data-id="total">-</dd></div>
+        <div><dt>Where it lives</dt><dd>Its own SQLite database, written one event at a time.</dd></div>
       </dl>
       <details class="raw">
         <summary>The front's answer, as JSON</summary>
@@ -99,17 +129,17 @@ tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/b
     <div class="rail-head">
       <h2 id="numbers-title">Measured, with the raw files</h2>
       <p>Every number here comes from a CSV the benchmark scripts wrote, linked below. None comes from memory, and what was not measured is said.</p>
-      <p class="small"><a href="{{ config.extra.docs }}/benchmarks.html">Benchmarks</a> has the method, the hardware and what each run does not test.</p>
+      <p class="small"><a href="{{ config.extra.docs }}/benchmarks.html#three-nodes-against-a-real-bucket">Three nodes against a real bucket</a> describes the soaks; the harness is <a href="{{ blob }}/crates/wasmkeep-cli/tests/soak.rs">soak.rs</a>.</p>
     </div>
     <div>
       <ul class="stats">
         <li><span class="stat-n">0</span><span class="stat-l">acknowledged durable writes lost, over 2,306,192 of them and 239 node kills in 12 hours on three VPS</span><a class="fn" href="#n1" aria-label="Source 1">1</a></li>
-        <li><span class="stat-n">17.6 s</span><span class="stat-l">median until a dead node's actors are writable again elsewhere; 23.1 s at p99</span><a class="fn" href="#n2" aria-label="Source 2">2</a></li>
+        <li><span class="stat-n">17.6 s</span><span class="stat-l">median until a dead node's actors are writable again elsewhere; 23.1 s at p99, 27.1 s at worst in that 2-hour run</span><a class="fn" href="#n2" aria-label="Source 2">2</a></li>
         <li><span class="stat-n">81 ms</span><span class="stat-l">median durable write as a client sees it, next to the bucket, under load</span><a class="fn" href="#n2" aria-label="Source 2">2</a></li>
         <li><span class="stat-n">61 µs</span><span class="stat-l">median read of a resident Rust actor; 250 KB of memory per resident actor</span><a class="fn" href="#n3" aria-label="Source 3">3</a></li>
       </ul>
       <ol class="notes">
-        <li id="n1">Three OVHcloud VPS next to OVHcloud Object Storage, a node killed every 3 minutes for 12 hours, every acknowledged write read back: <a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv</a>. Durable writes only: plain writes, which answer before the upload, may be lost with their node, and a 3-hour run lost 2 (<a href="{{ blob }}/bench/results/2026-11-13-648c2d1-soak-ovh-bhs-3vps-3h.csv">648c2d1</a>).</li>
+        <li id="n1">Three OVHcloud VPS next to OVHcloud Object Storage, a node killed every 3 minutes for 12 hours, every acknowledged write read back: <a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv</a>. Worst time to writable again in that run: 33.7 s. Durable writes only: plain writes, which answer before the upload, may be lost with their node, and a 3-hour run lost 2 (<a href="{{ blob }}/bench/results/2026-11-13-648c2d1-soak-ovh-bhs-3vps-3h.csv">648c2d1</a>). The files' write errors are attempts that got no acknowledgement (an error or no answer, as while a node is down); only acknowledged writes are checked and counted.</li>
         <li id="n2">The 0.4.1 release candidate, the same three VPS, 2 hours, 39 kills, 1,225 actors taken over, worst 27.1 s: <a href="{{ blob }}/bench/results/2026-11-14-0bf0547-soak-ovh-bhs-3vps-2h-0.4.1-rc.csv">2026-11-14-0bf0547-soak-ovh-bhs-3vps-2h-0.4.1-rc.csv</a>. Durable write p99: 1.02 s.</li>
         <li id="n3">A 16-core workstation, data on tmpfs, eight clients: <a href="{{ blob }}/bench/results/2026-11-06-351ea57.csv">2026-11-06-351ea57.csv</a>. The machine changes the answer; read it as an order of magnitude.</li>
       </ol>
@@ -151,7 +181,7 @@ tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/b
     </li>
     <li>
       <h3>{{<icon name="window" />}}An app with a front</h3>
-      <p>A stateless front serves pages and APIs and calls the actors, like this site does.</p>
+      <p>A stateless front serves pages and APIs and calls the actors, as this site's source does.</p>
       <a href="{{ tree }}/examples/todo-front">examples/todo-front</a>
     </li>
   </ul>
@@ -176,4 +206,5 @@ tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/b
 {% block scripts %}
 <script src="{{ get_url(path='tabs.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
 <script src="{{ get_url(path='wall.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
+<script src="{{ get_url(path='failover.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
 {% endblock scripts %}

@@ -1,20 +1,20 @@
 {% raw %}<span class="cm">// examples/ts-counter: the same counter, one actor per name.</span>
-export default defineActor({
+<span class="kw">export</span> <span class="kw">default</span> defineActor({
   init() {
 <span class="cm">    // Runs before this actor's first event: its table, in its own SQLite.</span>
     storage.exec(
-      "CREATE TABLE IF NOT EXISTS counter (id INTEGER PRIMARY KEY CHECK (id = 1), value INTEGER NOT NULL)",
+      <span class="st">"CREATE TABLE IF NOT EXISTS counter (id INTEGER PRIMARY KEY CHECK (id = 1), value INTEGER NOT NULL)"</span>,
     );
-    storage.exec("INSERT OR IGNORE INTO counter (id, value) VALUES (1, 0)");
+    storage.exec(<span class="st">"INSERT OR IGNORE INTO counter (id, value) VALUES (1, 0)"</span>);
   },
 
   fetch(req) {
 <span class="cm">    // One event at a time per actor: two POSTs to it never interleave.</span>
-    if (req.method === "POST") {
+    <span class="kw">if</span> (req.method === <span class="st">"POST"</span>) {
 <span class="cm">      // Committed locally, uploaded right after the event. To answer only</span>
 <span class="cm">      // once the bucket has it, commit with storage.execDurable("COMMIT").</span>
-      const [row] = storage.query("UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value");
-      return `${row.value}\n`;
+      <span class="kw">const</span> [row] = storage.query(<span class="st">"UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value"</span>);
+      <span class="kw">return</span> <span class="st">`${row.value}\n`</span>;
     }
 <span class="cm">    // ...</span>
   },
