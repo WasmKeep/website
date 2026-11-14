@@ -1,0 +1,39 @@
+# The project file (https://docs.wasmkeep.dev/project-file.html):
+# `wasmkeep dev` runs this app locally, as a node runs it deployed.
+
+[app]
+tenant = "wasmkeep"
+name = "website"
+
+[front]
+component = "front/target/wasm32-wasip2/release/website_front.wasm"
+# The site first (Zola, into public/), then the front that embeds it.
+build = "scripts/build-site.sh && cd front && cargo build --release --target wasm32-wasip2"
+watch = [
+  "config.toml",
+  "content",
+  "templates",
+  "sass",
+  "static",
+  "front/src",
+  "front/build.rs",
+  "front/Cargo.toml",
+]
+
+# The language wall: one class per language, each the WasmKeep example
+# counter for that language, from the release in WASMKEEP_VERSION
+# (scripts/fetch-components.sh). `internal`: only the front reaches them.
+# The front puts on the wall the languages listed here, so a language is
+# added by adding its class.
+[classes.rust]
+component = "components/rust-counter.wasm"
+access = "internal"
+
+# Not in a release yet; added when the main repository publishes them:
+# typescript, python, go, c, zig, d, moonbit, csharp.
+# [classes.typescript]
+# component = "components/typescript-counter.wasm"
+# access = "internal"
+
+[dev]
+port = 8080
