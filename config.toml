@@ -40,5 +40,13 @@ menu = [
   { name = "How it works", path = "/how-it-works/" },
   { name = "Features", path = "/features/" },
   { name = "Compare", path = "/compare/" },
+  { name = "Cost", path = "/cost/" },
   { name = "Get started", path = "/get-started/" },
 ]
+
+# The WasmKeep release the site's install commands, numbers and example
+# links point at (the wall's components follow WASMKEEP_VERSION).
+release = "0.4.1"
+# Files and examples of that release, on GitHub.
+tree = "https://github.com/WasmKeep/wasmkeep/tree/v0.4.1"
+blob = "https://github.com/WasmKeep/wasmkeep/blob/v0.4.1"
