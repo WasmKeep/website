@@ -30,31 +30,49 @@
     cx33: { name: "3 x Hetzner CX33", cur: "EUR", price: 8.99, disk: 80 },
   };
 
+  // The three scenarios of our cost research, each with its assumptions in
+  // one line. Extremes are reachable through the inputs, not as presets.
   const PRESETS = {
-    small: { req: 30e6, wshare: 10, rows: 1, rread: 2, gb: 5, awake: 0, wall: 20, cpu: 2 },
-    rooms: { req: 150e6, wshare: 60, rows: 2, rread: 4, gb: 40, awake: 0, wall: 10, cpu: 1 },
-    heavy: { req: 500e6, wshare: 50, rows: 4, rread: 10, gb: 500, awake: 0, wall: 20, cpu: 2 },
-    awake: { req: 20e6, wshare: 20, rows: 2, rread: 2, gb: 20, awake: 2000, wall: 20, cpu: 2 },
+    api50: {
+      note: "An API at 1 million requests a day (30 million a month) over 10,000 actors: 20% write 2 rows, each request reads 20 rows, 2 ms of Worker CPU, 50 ms of billed wall-clock, 5 GB stored.",
+      v: { req: 30e6, wshare: 20, rows: 2, rread: 20, msgs: 0, conns: 0, rconn: 0, gb: 5, awake: 0, wall: 50, cpu: 2 },
+    },
+    api500: {
+      note: "The same API, but each request keeps its object busy for 500 ms of billed wall-clock (waiting on an outside call, say).",
+      v: { req: 30e6, wshare: 20, rows: 2, rread: 20, msgs: 0, conns: 0, rconn: 0, gb: 5, awake: 0, wall: 500, cpu: 2 },
+    },
+    chat: {
+      note: "Chat: 100,000 rooms, 2 million WebSocket connections and 50 million incoming messages a month; each message writes 1 row and 1 index entry, each connection reads 50 rows of history; rooms hibernate between messages (10 ms billed per message assumed); about 50 GB stored.",
+      v: { req: 0, wshare: 0, rows: 2, rread: 0, msgs: 50e6, conns: 2e6, rconn: 50, gb: 50, awake: 0, wall: 10, cpu: 1 },
+    },
+    saas: {
+      note: "A SaaS with 1,000 tenant databases: 20 million requests a month, 25% write 4 rows, each request reads 100 rows, 5 ms of Worker CPU, 200 ms of billed wall-clock, 50 GB stored.",
+      v: { req: 20e6, wshare: 25, rows: 4, rread: 100, msgs: 0, conns: 0, rconn: 0, gb: 50, awake: 0, wall: 200, cpu: 5 },
+    },
   };
 
   const form = document.getElementById("calc-form");
   const $ = (id) => document.getElementById(id);
-  const fields = ["req", "wshare", "rows", "rread", "gb", "awake", "wall", "cpu"];
+  const fields = ["req", "wshare", "rows", "rread", "msgs", "conns", "rconn", "gb", "awake", "wall", "cpu"];
+  // Writes: the requests that write, and every incoming message.
+  const writesOf = (w) => w.req * (w.wshare / 100) + w.msgs;
 
   const over = (used, free, unit) => Math.ceil(Math.max(0, used - free) / unit) * unit;
 
   // Cloudflare Workers Paid + Durable Objects (USD).
   const cloudflare = (w) => {
-    const writes = w.req * (w.wshare / 100);
-    const gbs = w.req * (w.wall / 1000) * GB_PER_OBJECT + w.awake * GB_PER_OBJECT * MONTH_S;
+    const writes = writesOf(w);
+    const workerReqs = w.req + w.conns; // a WebSocket starts with one request
+    const gbs = (w.req + w.msgs) * (w.wall / 1000) * GB_PER_OBJECT + w.awake * GB_PER_OBJECT * MONTH_S;
     const lines = [
       ["Workers Paid plan", 5],
-      ["Workers requests", (Math.max(0, w.req - 10 * M) / M) * 0.3],
-      ["Workers CPU time", (Math.max(0, w.req * w.cpu - 30 * M) / M) * 0.02],
-      ["Durable Objects requests", (over(w.req, M, M) / M) * 0.15],
+      ["Workers requests", (Math.max(0, workerReqs - 10 * M) / M) * 0.3],
+      ["Workers CPU time", (Math.max(0, workerReqs * w.cpu - 30 * M) / M) * 0.02],
+      // Incoming WebSocket messages are billed 20 to 1 as requests.
+      ["Durable Objects requests", (over(workerReqs + w.msgs / 20, M, M) / M) * 0.15],
       ["Duration", (over(gbs, 400000, M) / M) * 12.5],
       ["Rows written", (over(writes * w.rows, 50 * M, M) / M) * 1],
-      ["Rows read", (over(w.req * w.rread, 25e9, M) / M) * 0.001],
+      ["Rows read", (over(w.req * w.rread + w.conns * w.rconn, 25e9, M) / M) * 0.001],
       ["Stored data", over(w.gb, 5, 1) * 0.2],
     ];
     return { lines: lines.map(([l, v]) => [l, v, "USD"]), totals: { USD: sum(lines) } };
@@ -62,7 +80,7 @@
 
   // Three VPS and a bucket (the currency of each).
   const selfHosted = (w, vpsKey, bucket) => {
-    const writes = w.req * (w.wshare / 100);
+    const writes = writesOf(w);
     const put = writes * PUT_PER_WRITE + IDLE.put * NODES * MONTH_S;
     const list = IDLE.list * NODES * MONTH_S;
     const get = IDLE.get * NODES * MONTH_S;
@@ -105,7 +123,7 @@
     if (n >= 1e6) return `${+(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)} million`;
     return n.toLocaleString("en-US");
   };
-  const tick = (n) => (n >= 1e9 ? `${n / 1e9}B` : n >= 1e6 ? `${n / 1e6}M` : `${n / 1e3}k`);
+  const times = (f) => `${f >= 10 ? Math.round(f) : f >= 1 ? +f.toFixed(1) : +f.toPrecision(2)}×`;
 
   const read = () => {
     const w = {};
@@ -128,8 +146,11 @@
   };
 
   // Requests per month along the x axis, on a log scale.
-  const X0 = 1e6;
-  const X1 = 1e10;
+  // The x axis scales your traffic (requests, messages, connections and
+  // the writes they make) from a hundredth to a hundred times; stored data
+  // and always-awake actors stay as you set them.
+  const X0 = 0.01;
+  const X1 = 100;
   const STEPS = 80;
   const sweepXs = [...Array(STEPS + 1)].map((_, i) => X0 * Math.pow(X1 / X0, i / STEPS));
 
@@ -180,7 +201,7 @@
     const yMax = Math.pow(10, hi);
     const sx = (x) => L + ((Math.log10(x) - Math.log10(X0)) / (Math.log10(X1) - Math.log10(X0))) * (W - L - R);
     const sy = (y) => T + (1 - (Math.log10(Math.max(y, Math.pow(10, lo))) - lo) / (hi - lo)) * (H - T - B);
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `${title}: monthly bill against requests per month, both on logarithmic scales, from 1 million to 10 billion requests` });
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `${title}: monthly bill against your traffic, from a hundredth to a hundred times, both on logarithmic scales` });
     for (let e = lo; e <= hi; e++) {
       const y = Math.pow(10, e);
       el("line", { class: "ch-grid", x1: L, x2: W - R, y1: sy(y), y2: sy(y) }, svg);
@@ -188,12 +209,12 @@
       const n = y >= 1e6 ? `${y / 1e6}M` : y >= 1e3 ? `${y / 1e3}k` : String(y);
       t.textContent = `${cur === "EUR" ? "€" : "US$"}${n}`;
     }
-    for (const x of W < 480 ? [1e6, 1e8, 1e10] : [1e6, 1e7, 1e8, 1e9, 1e10]) {
+    for (const x of W < 480 ? [0.01, 1, 100] : [0.01, 0.1, 1, 10, 100]) {
       const t = el("text", { class: "ch-axis", x: sx(x), y: H - 28, "text-anchor": "middle" }, svg);
-      t.textContent = tick(x);
+      t.textContent = times(x);
     }
     const xl = el("text", { class: "ch-axis", x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle" }, svg);
-    xl.textContent = "requests per month (log scale)";
+    xl.textContent = "your traffic, times (log scale)";
     const pathOf = (ys, from, to) =>
       ys
         .slice(from, to + 1)
@@ -209,16 +230,16 @@
       el("path", { class: `ch-line ${s.cf ? "ch-cf" : "ch-self"}`, d: pathOf(s.ys, 0, cut) }, svg);
       if (cut < STEPS) el("path", { class: "ch-line ch-beyond", d: pathOf(s.ys, cut, STEPS) }, svg);
     }
-    if (w.req >= X0 && w.req <= X1) {
-      el("line", { class: "ch-now", x1: sx(w.req), x2: sx(w.req), y1: T, y2: H - B }, svg);
-      const t = el("text", { class: "ch-label", x: sx(w.req) + 4, y: T + 10 }, svg);
+    {
+      el("line", { class: "ch-now", x1: sx(1), x2: sx(1), y1: T, y2: H - B }, svg);
+      const t = el("text", { class: "ch-label", x: sx(1) + 4, y: T + 10 }, svg);
       t.textContent = "you";
     }
     if (cross) {
       el("circle", { class: "ch-cross", cx: sx(cross.x), cy: sy(cross.y), r: 5 }, svg);
       const right = sx(cross.x) > W * 0.7;
       const t = el("text", { class: "ch-label", x: sx(cross.x) + (right ? -9 : 9), y: sy(cross.y) - 9, "text-anchor": right ? "end" : "start" }, svg);
-      t.textContent = `cross at ${big(cross.x)}`;
+      t.textContent = `cross at ${times(cross.x)}`;
     }
     // Hover and focus: a crosshair that snaps to the nearest step.
     const hair = el("line", { class: "ch-hair", y1: T, y2: H - B, visibility: "hidden" }, svg);
@@ -236,7 +257,7 @@
     tip.hidden = true;
     tip.setAttribute("aria-live", "polite");
     box.append(fig, tip);
-    let at = Math.round((STEPS * Math.log10(w.req / X0)) / 4) || 0;
+    let at = STEPS / 2;
     const showAt = (i) => {
       at = Math.max(0, Math.min(STEPS, i));
       const x = sx(sweepXs[at]);
@@ -245,7 +266,7 @@
       hair.setAttribute("visibility", "visible");
       tip.replaceChildren();
       const head = document.createElement("div");
-      head.textContent = `${big(sweepXs[at])} requests`;
+      head.textContent = `${times(sweepXs[at])} your traffic`;
       tip.append(head);
       series.forEach((s, j) => {
         dots[j].setAttribute("cx", x);
@@ -300,7 +321,7 @@
 
     const curs = Object.keys(self.totals).filter((c) => self.totals[c] > 0 || c === "USD");
     const allUsd = Object.keys(self.totals).every((c) => c === "USD");
-    const at = (x) => ({ ...w, req: x });
+    const at = (f) => ({ ...w, req: w.req * f, msgs: w.msgs * f, conns: w.conns * f });
     const cfYs = sweepXs.map((x) => cloudflare(at(x)).totals.USD);
     const selfUsd = sweepXs.map((x) => selfHosted(at(x), vps, bucket).totals.USD || 0);
     const selfEur = sweepXs.map((x) => selfHosted(at(x), vps, bucket).totals.EUR || 0);
@@ -330,8 +351,8 @@
             : `${money(-d, "USD")} more a month self-hosted`;
       verdict.textContent = `At your numbers: ${now}, before your time and the rest of what the bill leaves out. ${
         cross
-          ? `With everything else fixed, ${cross.cfAbove ? "Cloudflare" : "self-hosting"} costs more above about ${big(cross.x)} requests a month.`
-          : `With everything else fixed, ${cfYs[0] > selfUsd[0] ? "self-hosting" : "Cloudflare"} stays cheaper from 1 million to 10 billion requests a month.`
+          ? `Scaling your traffic with storage fixed, ${cross.cfAbove ? "Cloudflare" : "self-hosting"} costs more above about ${times(cross.x)} your traffic.`
+          : `Scaling your traffic from a hundredth to a hundred times, with storage fixed, ${cfYs[0] > selfUsd[0] ? "self-hosting" : "Cloudflare"} stays cheaper throughout.`
       }`;
     } else {
       verdict.textContent = `Cloudflare: ${totalText(cf.totals)}. Self-hosted: ${totalText(self.totals)}. Part of that is in euros, and we do not convert currencies, so no crossing is drawn: compare the two at your own exchange rate.`;
@@ -362,8 +383,8 @@
       verdict.textContent += " The servers in this bill may not carry it: read the capacity and disk notes below the bills.";
     }
 
-    // Requests a month at which writes pass the soaked rate.
-    const rStar = w.wshare > 0 ? (SOAK_WRITES_PER_S * MONTH_S) / (w.wshare / 100) : Infinity;
+    // The traffic factor at which writes pass the soaked rate.
+    const rStar = self.writes > 0 ? (SOAK_WRITES_PER_S * MONTH_S) / self.writes : Infinity;
     const charts = $("charts");
     charts.replaceChildren();
     const usdSeries = [{ label: "Cloudflare", cf: true, ys: cfYs }];
@@ -378,7 +399,7 @@
     const table = $("sweep-table");
     table.replaceChildren();
     const head = table.createTHead().insertRow();
-    for (const t of ["Requests / month", "Cloudflare (US$)", "Self-hosted (US$)", "Self-hosted (EUR)"]) {
+    for (const t of ["Your traffic", "Cloudflare (US$)", "Self-hosted (US$)", "Self-hosted (EUR)"]) {
       const th = document.createElement("th");
       th.scope = "col";
       th.textContent = t;
@@ -387,7 +408,7 @@
     const body = table.createTBody();
     for (let i = 0; i <= STEPS; i += 10) {
       const r = body.insertRow();
-      for (const v of [big(sweepXs[i]), money(cfYs[i], "USD"), money(selfUsd[i], "USD"), money(selfEur[i], "EUR")]) {
+      for (const v of [times(sweepXs[i]), money(cfYs[i], "USD"), money(selfUsd[i], "USD"), money(selfEur[i], "EUR")]) {
         r.insertCell().textContent = v;
       }
     }
@@ -395,7 +416,8 @@
 
   const apply = (name) => {
     const p = PRESETS[name];
-    for (const f of fields) form.elements[f].value = p[f];
+    for (const f of fields) form.elements[f].value = p.v[f];
+    $("preset-note").textContent = p.note;
     for (const b of root.querySelectorAll("[data-preset]")) b.setAttribute("aria-pressed", String(b.dataset.preset === name));
     render();
   };
@@ -417,5 +439,5 @@
       }
     }, 150);
   });
-  apply("small");
+  apply("api50");
 })();

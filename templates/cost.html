@@ -15,17 +15,18 @@
   <noscript><p class="callout warn">The calculator needs JavaScript. The prices and the formulas it uses are listed below the calculator.</p></noscript>
   <div class="calc" id="calc" hidden>
     <form class="calc-form" id="calc-form" aria-labelledby="calc-title">
-      <div class="presets" role="group" aria-label="Start from an example">
-        <button type="button" data-preset="small" aria-pressed="true">Small API</button>
-        <button type="button" data-preset="rooms">Busy rooms</button>
-        <button type="button" data-preset="heavy">Heavy writes</button>
-        <button type="button" data-preset="awake">Always awake</button>
+      <div class="presets" role="group" aria-label="Start from a scenario">
+        <button type="button" data-preset="api50" aria-pressed="true">API, 50 ms</button>
+        <button type="button" data-preset="api500">API, 500 ms</button>
+        <button type="button" data-preset="chat">Chat</button>
+        <button type="button" data-preset="saas">SaaS tenants</button>
       </div>
+      <p class="small" id="preset-note" aria-live="polite"></p>
       <fieldset>
         <legend>Your workload, per month</legend>
         <label for="in-req">Requests</label>
         <input id="in-req" name="req" type="number" min="0" step="1000000" inputmode="numeric">
-        <span class="hint">Each reaches one actor (one Worker request and one Durable Object request on Cloudflare).</span>
+        <span class="hint">HTTP requests, each reaching one actor (one Worker request and one Durable Object request on Cloudflare).</span>
         <label for="in-wshare">Requests that write, %</label>
         <input id="in-wshare" name="wshare" type="number" min="0" max="100" step="1">
         <label for="in-rows">Rows written per write</label>
@@ -33,12 +34,19 @@
         <span class="hint">Cloudflare bills rows; a WasmKeep write is about 1.03 bucket PUTs whatever its rows.</span>
         <label for="in-rread">Rows read per request</label>
         <input id="in-rread" name="rread" type="number" min="0" step="1">
+        <label for="in-msgs">Incoming WebSocket messages</label>
+        <input id="in-msgs" name="msgs" type="number" min="0" step="1000000" inputmode="numeric">
+        <span class="hint">Each one writes. Cloudflare bills them 20 to 1 as requests.</span>
+        <label for="in-conns">WebSocket connections</label>
+        <input id="in-conns" name="conns" type="number" min="0" step="10000" inputmode="numeric">
+        <label for="in-rconn">Rows read per connection</label>
+        <input id="in-rconn" name="rconn" type="number" min="0" step="1">
         <label for="in-gb">Stored data, GB</label>
         <input id="in-gb" name="gb" type="number" min="0" step="1">
         <label for="in-awake">Actors that never hibernate</label>
         <input id="in-awake" name="awake" type="number" min="0" step="1">
         <span class="hint">For example a room holding WebSockets without Cloudflare's hibernation API: billed for duration all month.</span>
-        <label for="in-wall">Wall-clock time per request, ms</label>
+        <label for="in-wall">Billed wall-clock per request or message, ms</label>
         <input id="in-wall" name="wall" type="number" min="0" step="1">
         <label for="in-cpu">Worker CPU time per request, ms</label>
         <input id="in-cpu" name="cpu" type="number" min="0" step="0.5">
@@ -77,7 +85,7 @@
       </div>
       <p class="small" id="capacity"></p>
       <div id="charts"></div>
-      <p class="small">Both axes are logarithmic. Everything but the number of requests stays as you set it; writes grow with requests.</p>
+      <p class="small">Both axes are logarithmic. The x axis scales your traffic (requests, messages, connections and their writes) from a hundredth to a hundred times; stored data and always-awake actors stay as you set them.</p>
       <details>
         <summary class="small">The chart as a table</summary>
         <div class="table-scroll"><table class="price-table" id="sweep-table"></table></div>
