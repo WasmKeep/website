@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} - {{ config.title }}{% endblock title %}
+{% block description %}{{ page.description }}{% endblock description %}
+{% block content %}
+{%- set docs = config.extra.docs -%}
+<header class="wrap page-head">
+  <h1>WasmKeep and the alternatives</h1>
+  <p class="lead">Several good tools give each piece of state its own small home. They differ on what you write it in, where the state lives, when a write counts as done, and who runs it. Here is each one as its own pages describe it, and when to pick it instead.</p>
+  <p class="small">Read on each project's own site or repository on 2026-11-14; sources at the end. A cell says "not stated" where the pages we read do not say. Corrections are welcome as <a href="{{ config.extra.source }}/issues">an issue</a>.</p>
+</header>
+
+<section class="wrap cmp-wrap" aria-labelledby="cmp-title">
+  <h2 id="cmp-title" class="small">Side by side</h2>
+  <div class="cmp-table-wrap" tabindex="0" role="region" aria-labelledby="cmp-title">
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th scope="col">Project</th>
+          <th scope="col">Model and languages</th>
+          <th scope="col">Where state lives</th>
+          <th scope="col">When a write is acknowledged</th>
+          <th scope="col">Run it yourself</th>
+          <th scope="col">Licence</th>
+          <th scope="col">Maturity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="us">
+          <th scope="row">WasmKeep</th>
+          <td>Actors, one per name, one event at a time. Any WASI 0.2 component: SDKs for Rust, TypeScript, Python, C, Zig, Go (TinyGo); standard Go, D, MoonBit experimental.</td>
+          <td>One SQLite database per actor on its node's disk, replicated to your S3-compatible bucket.</td>
+          <td><code>exec-durable</code>: once the bucket holds it. Plain <code>exec</code>: once committed locally, uploaded right after the event.</td>
+          <td>Yes, only: one binary per node, nodes share a bucket.</td>
+          <td>Apache-2.0</td>
+          <td>Pre-alpha, 0.4.1 (pre-release).</td>
+        </tr>
+        <tr>
+          <th scope="row">Cloudflare Durable Objects</th>
+          <td>One object per id, on Workers. JavaScript, TypeScript and Python; other languages through a shim to a JavaScript class.</td>
+          <td>A SQLite database embedded in each object, on Cloudflare's network; 10 GB per object on Workers Paid.</td>
+          <td>Writes go to a buffer flushed to disk; an output gate holds outgoing messages until earlier writes are confirmed flushed.</td>
+          <td>The platform is Cloudflare's. workerd, its open-source runtime, serves Durable Objects locally, with a cluster mode marked experimental.</td>
+          <td>Managed service; workerd is Apache-2.0.</td>
+          <td>Generally available since 2021; SQLite storage GA in April 2025.</td>
+        </tr>
+        <tr>
+          <th scope="row">celld</th>
+          <td>Wrangler bundles on V8 (Workers, Durable Objects, KV, Queues, D1, R2, Workflows) from your <code>wrangler.json</code>.</td>
+          <td>Each object a "cell" with its own SQLite database; long-term state in your S3, GCS or Azure bucket.</td>
+          <td>One node: once the bucket has it. Two or more: once one or two other nodes hold it on disk; the bucket upload follows.</td>
+          <td>Yes: a daemon on your machines.</td>
+          <td>Apache-2.0</td>
+          <td>v0.6.3, which its docs call a beta release. Pull requests disabled; patches by email under a CLA.</td>
+        </tr>
+        <tr>
+          <th scope="row">Rivet</th>
+          <td>Actors: long-lived processes with in-memory state, SQLite, WebSockets and scheduling. RivetKit for TypeScript and Rust; Python and Swift experimental.</td>
+          <td>Its site says each actor's data lives in a bucket you own; its state docs also mention a durable volume.</td>
+          <td>"Every committed write is replicated before it is acknowledged"; in-memory <code>vars</code> are never persisted.</td>
+          <td>Yes: Docker, Kubernetes or a VM.</td>
+          <td>Apache-2.0</td>
+          <td>v3.1.1 (November 2026).</td>
+        </tr>
+        <tr>
+          <th scope="row">Golem</th>
+          <td>Durable agents as WebAssembly components: Rust, TypeScript, Scala and MoonBit.</td>
+          <td>An append-only oplog per agent, on Redis, PostgreSQL or SQLite, archived to S3 or a filesystem; recovery replays it.</td>
+          <td>Not stated on the pages we read.</td>
+          <td>Yes: a single binary, your infrastructure, or Golem Cloud.</td>
+          <td>Business Source License 1.1, Apache-2.0 four years after each release.</td>
+          <td>v1.6.3 (November 2026).</td>
+        </tr>
+        <tr>
+          <th scope="row">Microsoft Orleans</th>
+          <td>Virtual actors ("grains") in .NET.</td>
+          <td>A storage provider you choose: ADO.NET databases, Azure Storage, Cosmos DB, DynamoDB, Redis and others.</td>
+          <td>When <code>WriteStateAsync</code> completes; a storage failure throws from it. State is not persisted until you call it.</td>
+          <td>Yes: wherever .NET runs, including Kubernetes.</td>
+          <td>MIT</td>
+          <td>Used at Microsoft in Azure, Xbox and others; v10.4.2.</td>
+        </tr>
+        <tr>
+          <th scope="row">Dapr actors</th>
+          <td>Turn-based actors behind a sidecar. Actor SDKs for .NET, Python, Java, Go, PHP and JavaScript.</td>
+          <td>One transactional state store you configure for actors.</td>
+          <td>Not stated on the pages we read.</td>
+          <td>Yes: open source.</td>
+          <td>Apache-2.0</td>
+          <td>A CNCF graduated project; v1.19.1.</td>
+        </tr>
+        <tr>
+          <th scope="row">Temporal</th>
+          <td>Durable execution of workflows. SDKs for Go, Java, Python, TypeScript, .NET, Ruby, PHP and Rust.</td>
+          <td>Each workflow's event history, in the Temporal Service's database: Cassandra, PostgreSQL or MySQL.</td>
+          <td>Not stated as such; the event history is the source of truth that recovery replays.</td>
+          <td>Yes: the Temporal Service is open source.</td>
+          <td>MIT</td>
+          <td>v1.32.2 (November 2026).</td>
+        </tr>
+        <tr>
+          <th scope="row">Restate</th>
+          <td>Durable execution; Virtual Objects with a single writer per key. SDKs for TypeScript, Java, Kotlin, Python, Go, Rust and Ruby.</td>
+          <td>The Restate Server's log, on disk and replicated, with RocksDB for state; snapshots in S3 for clusters.</td>
+          <td>In a cluster, a majority must accept new log entries; the exact point of the answer is not stated.</td>
+          <td>Yes: a single binary, one node or a cluster.</td>
+          <td>Server: Business Source License 1.1, Apache-2.0 after four years. SDKs: MIT.</td>
+          <td>v1.8.1 (November 2026).</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">Scroll the table sideways on a narrow screen. Versions are the latest releases on each project's GitHub on 2026-11-14.</p>
+</section>
+
+<section class="band" aria-labelledby="picks-title">
+  <div class="wrap rail">
+    <div class="rail-head">
+      <h2 id="picks-title">Pick them instead when</h2>
+      <p>WasmKeep is young. Each of these is the better choice for someone; this is when it is likely to be you.</p>
+    </div>
+    <ul class="picks">
+      <li>
+        <h3>Cloudflare Durable Objects</h3>
+        <p>You want a managed global network, years of production at Cloudflare's scale, a mature JavaScript ecosystem and no servers to run. At small and medium scale it is likely as cheap or cheaper too: see <a href="/cost/">Cost</a>.</p>
+      </li>
+      <li>
+        <h3>celld</h3>
+        <p>You already have Workers code and want it on your own machines as it is, with the Workers platform pieces (KV, Queues, D1, R2) beside it. WasmKeep has its own API and no Workers compatibility.</p>
+      </li>
+      <li>
+        <h3>Rivet</h3>
+        <p>Your backend is TypeScript and you want actors inside it, on Node.js or Bun.</p>
+      </li>
+      <li>
+        <h3>Golem</h3>
+        <p>You want durable execution of a whole agent, replaying its interactions after a failure, rather than a database per actor that you write to yourself.</p>
+      </li>
+      <li>
+        <h3>Orleans</h3>
+        <p>Your team writes .NET and your state belongs in a database you already run. Orleans is mature, and Microsoft runs it in its own services.</p>
+      </li>
+      <li>
+        <h3>Dapr actors</h3>
+        <p>You run Kubernetes and want actors beside Dapr's other building blocks, from many languages, on a state store you already have.</p>
+      </li>
+      <li>
+        <h3>Temporal</h3>
+        <p>Your problem is long-running workflows across services (orders, payments, provisioning) more than many small pieces of state.</p>
+      </li>
+      <li>
+        <h3>Restate</h3>
+        <p>You want durable handlers and per-key state in front of services you already have, in your existing language, with one server to run.</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="wrap rail" aria-labelledby="fit-title">
+  <div class="rail-head">
+    <h2 id="fit-title">Where WasmKeep fits</h2>
+  </div>
+  <div class="prose">
+    <p>Pick WasmKeep when you want the one-object-per-thing model on servers you own, in a compiled language or several, with each actor's data as SQLite files and a documented replication format in your own bucket, and with every durable write in that bucket before it is acknowledged. Accept, today, that it is pre-alpha, runs in one region per cluster, and takes seconds to fail over.</p>
+    <p>The documentation compares it in more depth, with measurements, with <a href="{{ docs }}/compared-with-workers.html">Cloudflare Workers</a> and with <a href="{{ docs }}/compared-with-celld.html">celld</a>.</p>
+  </div>
+</section>
+
+<section class="band band-end" aria-labelledby="src-title">
+  <div class="wrap section">
+    <h2 id="src-title">Sources</h2>
+    <p class="small">Each project's own pages, read on 2026-11-14.</p>
+    <ul class="sources">
+      <li>Cloudflare Durable Objects: <a href="https://developers.cloudflare.com/durable-objects/get-started/">get started</a>, <a href="https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/">SQLite storage API</a>, <a href="https://developers.cloudflare.com/durable-objects/platform/limits/">limits</a>, <a href="https://developers.cloudflare.com/durable-objects/release-notes/">release notes</a>, <a href="https://blog.cloudflare.com/durable-objects-ga/">GA announcement</a>; workerd: <a href="https://github.com/cloudflare/workerd">README and licence</a>, <a href="https://github.com/cloudflare/workerd/blob/main/src/workerd/server/workerd.capnp">workerd.capnp</a> (cluster mode).</li>
+      <li>celld: <a href="https://github.com/denoland/celld">README and licence</a>, <a href="https://github.com/denoland/celld/blob/main/docs/limitations.md">limitations</a>.</li>
+      <li>Rivet: <a href="https://rivet.dev/">rivet.dev</a>, <a href="https://rivet.dev/docs/actors/">actors</a>, <a href="https://rivet.dev/actors/docs/state/">state</a>, <a href="https://github.com/rivet-dev/rivet">repository</a>.</li>
+      <li>Golem: <a href="https://learn.golem.cloud/">learn.golem.cloud</a>, <a href="https://learn.golem.cloud/v1.6/concepts/durable-execution">durable execution</a>, <a href="https://learn.golem.cloud/v1.6/operate/persistence">persistence</a>, <a href="https://github.com/golemcloud/golem">repository and licence</a>.</li>
+      <li>Orleans: <a href="https://learn.microsoft.com/en-us/dotnet/orleans/overview">overview</a>, <a href="https://learn.microsoft.com/en-us/dotnet/orleans/grains/grain-persistence/">grain persistence</a>, <a href="https://github.com/dotnet/orleans">repository</a>.</li>
+      <li>Dapr: <a href="https://docs.dapr.io/developing-applications/building-blocks/actors/actors-overview/">actors overview</a>, <a href="https://docs.dapr.io/developing-applications/sdks/">SDKs</a>, <a href="https://dapr.io/">dapr.io</a>, <a href="https://github.com/dapr/dapr">repository</a>.</li>
+      <li>Temporal: <a href="https://temporal.io/">temporal.io</a>, <a href="https://docs.temporal.io/workflows">workflows</a>, <a href="https://docs.temporal.io/encyclopedia/temporal-sdks">SDKs</a>, <a href="https://docs.temporal.io/temporal-service/persistence">persistence</a>, <a href="https://github.com/temporalio/temporal">repository</a>.</li>
+      <li>Restate: <a href="https://restate.dev/">restate.dev</a>, <a href="https://docs.restate.dev/">docs</a>, <a href="https://github.com/restatedev/restate">repository and licence</a>.</li>
+    </ul>
+  </div>
+</section>
+{% endblock content %}
