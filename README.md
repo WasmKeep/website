@@ -5,7 +5,16 @@ WasmKeep itself. It is a real WasmKeep app, and an example of one: a Rust
 front that serves a static site and calls the app's actors.
 
 - `content/`, `templates/`, `sass/`, `static/`, `config.toml`: the site,
-  built with [Zola](https://www.getzola.org/) (0.23).
+  built with [Zola](https://www.getzola.org/) (0.23). One stylesheet with
+  colour tokens and a dark scheme, system fonts, inline SVG icons, and a
+  small script per interactive page, each a file of its own (the front's
+  CSP allows no inline script or style):
+  - `static/wall.js`: the language wall and what answered (home);
+  - `static/tabs.js`: the language tabs of the code sample (home);
+  - `static/failover.js`: the "kill a node" diagram (`/how-it-works/`), a
+    model of the default lease timings, not a live cluster;
+  - `static/cost.js`: the break-even calculator (`/cost/`). Its prices
+    are dated and linked on the page; update both together.
 - `front/`: the app's front, a Rust WebAssembly component
   ([`wasmkeep-sdk`](https://crates.io/crates/wasmkeep-sdk), front API). It
   embeds the Zola output at build time and serves it with ETags and
