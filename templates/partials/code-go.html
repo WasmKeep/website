@@ -1,0 +1,23 @@
+{% raw %}<span class="cm">// examples/go-counter (TinyGo): the same counter, one actor per name.</span>
+func init() {
+	wasmkeep.Serve(wasmkeep.Actor{Init: migrate, Fetch: fetch})
+}
+
+func fetch(req *wasmkeep.Request) wasmkeep.Response {
+	var sql string
+	switch req.Method {
+	case "GET":
+		sql = "SELECT value FROM counter WHERE id = 1"
+	case "POST":
+<span class="cm">		// Committed locally, uploaded right after the event. To answer</span>
+<span class="cm">		// only once the bucket has it, commit with wasmkeep.ExecDurable.</span>
+		sql = "UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value"
+	default:
+		return wasmkeep.Text(405, "use GET or POST\n")
+	}
+	value, err := wasmkeep.QueryInt(sql)
+	if err != nil {
+		return wasmkeep.Text(500, err.Error()+"\n")
+	}
+	return wasmkeep.Text(200, strconv.FormatInt(value, 10)+"\n")
+}{% endraw %}

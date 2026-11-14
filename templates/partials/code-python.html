@@ -1,0 +1,22 @@
+{% raw %}<span class="cm"># examples/py-counter: the same counter, one actor per name.</span>
+class Counter(Actor):
+    def init(self):
+<span class="cm">        # Runs before this actor's first event: its table, in its own SQLite.</span>
+        storage.exec(
+            "CREATE TABLE IF NOT EXISTS counter"
+            " (id INTEGER PRIMARY KEY CHECK (id = 1), value INTEGER NOT NULL)"
+        )
+        storage.exec("INSERT OR IGNORE INTO counter (id, value) VALUES (1, 0)")
+
+    def fetch(self, req):
+        if req.method == "GET":
+            [row] = storage.query("SELECT value FROM counter WHERE id = 1")
+        elif req.method == "POST":
+<span class="cm">            # Committed locally, uploaded right after the event. To answer</span>
+<span class="cm">            # only once the bucket has it: storage.exec_durable("COMMIT").</span>
+            [row] = storage.query(
+                "UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value"
+            )
+        else:
+            return Response("use GET or POST\n", 405)
+        return f"{row['value']}\n"{% endraw %}

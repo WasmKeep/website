@@ -21,12 +21,40 @@
     }
   };
 
+  // "What answered": the actors behind the tiles, from the front's answer.
+  const field = (id) => wall.querySelector(`[data-id="${id}"]`);
+  const identify = (body) => {
+    const entries = body.wall || [];
+    const live = entries.filter((e) => e.state === "live");
+    const set = (id, text) => {
+      const el = field(id);
+      if (el) el.textContent = text;
+    };
+    set("live", String(live.length));
+    set("soon", String(entries.filter((e) => e.state === "soon").length));
+    set("total", String(live.reduce((sum, e) => sum + (Number(e.count) || 0), 0)));
+    const addrs = field("addrs");
+    if (addrs) {
+      addrs.replaceChildren();
+      live.forEach((e, i) => {
+        if (i) addrs.append(", ");
+        const c = document.createElement("code");
+        c.textContent = `${e.lang}/wall`;
+        addrs.append(c);
+      });
+      if (!live.length) addrs.textContent = "none answering";
+    }
+    const rows = entries.map((e) => `    ${JSON.stringify(e)}`).join(",\n");
+    set("json", `{\n  "wall": [\n${rows}\n  ],\n  "node": ${JSON.stringify(body.node ?? null)}\n}`);
+  };
+
   const refresh = async () => {
     try {
       const r = await fetch("/api/wall", { headers: { Accept: "application/json" } });
       if (!r.ok) return;
       const body = await r.json();
       for (const entry of body.wall || []) show(entry.lang, entry.count);
+      identify(body);
     } catch (_) {
       // Offline or the front is restarting: keep what is shown.
     }
@@ -47,6 +75,7 @@
       if (!r.ok) throw new Error(String(r.status));
       const body = await r.json();
       show(body.lang, body.count);
+      refresh();
       status.textContent = body.node
         ? `${name}: ${body.count}, answered by node ${body.node}.`
         : `${name}: ${body.count}.`;
@@ -57,6 +86,7 @@
     }
   });
 
+  refresh();
   setInterval(() => {
     if (document.visibilityState === "visible") refresh();
   }, 15000);
