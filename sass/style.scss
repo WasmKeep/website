@@ -20,6 +20,8 @@
   --code-bg: #101722;
   --code-ink: #dde3ea;
   --code-cm: #b8a9ff;
+  --code-kw: #7fd3ff;
+  --code-st: #b5e48c;
   // Chart series (validated pair, see static/cost.js).
   --series-self: #2a78d6;
   --series-cf: #eb6834;
@@ -49,6 +51,8 @@
     --code-bg: #0a0e13;
     --code-ink: #d7dde4;
     --code-cm: #b8a9ff;
+    --code-kw: #7fd3ff;
+    --code-st: #b5e48c;
     --series-self: #3987e5;
     --series-cf: #d95926;
   }
@@ -247,9 +251,33 @@ code {
 @media (max-width: 30rem) {
   .nav {
     column-gap: 0.75rem;
+    row-gap: 0.3rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.4rem;
   }
   .nav-out {
     column-gap: 0.75rem !important;
+  }
+  // GitHub keeps its icon and an accessible name, without the word.
+  .nav-out li:last-child span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .nav-out {
+    align-items: center;
+  }
+  .nav-links {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 0 0.9rem !important;
+    a {
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
   }
 }
 
@@ -342,6 +370,53 @@ code {
 
 .cm {
   color: var(--code-cm);
+}
+
+.kw {
+  color: var(--code-kw);
+}
+
+.st {
+  color: var(--code-st);
+}
+
+.copy-wrap {
+  position: relative;
+}
+
+.copy {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  font: 600 0.78rem var(--sans);
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  border: 1px solid #3a4452;
+  background: #1c2430;
+  color: var(--code-ink);
+  cursor: pointer;
+  &:hover {
+    border-color: var(--code-cm);
+  }
+}
+
+.copy-note {
+  position: absolute;
+  top: 0.55rem;
+  right: 4rem;
+  font-size: 0.78rem;
+  color: var(--code-cm);
+}
+
+@media (max-width: 40rem) {
+  .term {
+    font-size: 0.76rem;
+    padding: 0.75rem 0.7rem;
+  }
+  .copy-wrap .term code {
+    display: block;
+    padding-top: 1.6rem;
+  }
 }
 
 .actions {
@@ -619,8 +694,10 @@ code {
   color: var(--muted);
 }
 
-.wall-item:has(.wall-soon) .wall-addr {
-  visibility: hidden;
+// Languages whose counter no release publishes yet stay off the page;
+// the text above the tile says when they come.
+.wall-item:has(.wall-soon) {
+  display: none;
 }
 
 .wall-count {
@@ -743,6 +820,99 @@ code {
   li:target {
     color: var(--ink);
   }
+}
+
+// Why WasmKeep
+
+.why {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem 2rem;
+  @media (min-width: 40rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  li {
+    border-top: 2px solid var(--accent);
+    padding-top: 0.8rem;
+    position: relative;
+  }
+  h3 {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    .icon {
+      color: var(--accent);
+      margin-top: 0.1rem;
+    }
+  }
+  p {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin: 0;
+  }
+  .fn {
+    position: static;
+    margin-left: 0.35rem;
+    min-width: 1.3rem;
+    height: 1.3rem;
+    font-size: 0.7rem;
+    vertical-align: 0.1em;
+  }
+}
+
+.demo {
+  padding-top: clamp(2.5rem, 5vw, 4rem);
+}
+
+// Features
+
+.features {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .feat-wide {
+    border-top: 3px solid var(--accent);
+    @media (min-width: 40rem) {
+      grid-column: span 2;
+    }
+  }
+  h2 {
+    font-size: 1.05rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    .icon {
+      color: var(--accent);
+      margin-top: 0.1rem;
+    }
+  }
+  p {
+    font-size: 0.94rem;
+    color: var(--muted);
+    flex: 1;
+  }
+  a {
+    font-size: 0.9rem;
+  }
+}
+
+.num-table td:not(:first-child) {
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  white-space: normal;
 }
 
 // Use cases
@@ -1244,6 +1414,10 @@ code {
     border-top-color: var(--series-cf);
     border-top-style: dashed;
   }
+  .key.beyond {
+    border-top-color: var(--muted);
+    border-top-style: dotted;
+  }
 }
 
 .ch-grid {
@@ -1269,6 +1443,16 @@ code {
 .ch-cf {
   stroke: var(--series-cf);
   stroke-dasharray: 6 4;
+}
+
+.ch-beyond {
+  stroke: var(--muted);
+  stroke-dasharray: 2 3;
+}
+
+.chart-focus:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .ch-now {
@@ -1376,15 +1560,11 @@ code {
   margin-bottom: 1rem;
 }
 
-.sim-scroll {
-  overflow-x: auto;
-}
-
-.sim-scroll > svg {
+.sim-fig > svg {
   display: block;
   width: 100%;
-  min-width: 600px;
   height: auto;
+  max-height: 80vh;
 }
 
 .sim-controls {
@@ -1648,4 +1828,8 @@ code {
   .dg-hot {
     stroke: CanvasText;
   }
+}
+
+.why + p {
+  margin-top: 1.25rem;
 }
