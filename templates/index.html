@@ -64,7 +64,7 @@ tar xzf "$f" &amp;&amp; sudo install -m 755 "${f%.tar.gz}/wasmkeep" /usr/local/b
 <section id="wall" class="wrap rail wall" aria-labelledby="wall-title">
   <div class="rail-head">
     <h2 id="wall-title">Try it: the language wall</h2>
-    <p>Each tile is a live actor behind this page: the counter in that language, its own class, one actor named <code>wall</code>. Add one, and the count is written to that actor's own database.</p>
+    <p>Each live tile is an actor behind this page: the counter in that language, its own class, one actor named <code>wall</code>. Add one, and the count is written to that actor's own database.</p>
     <p class="small">The page's front reads every counter with one batch of calls (<code>GET /api/wall</code>). Languages marked "soon" join when a WasmKeep release publishes their counter.</p>
   </div>
   <div class="wall-body">

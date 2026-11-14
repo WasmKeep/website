@@ -229,9 +229,10 @@
       });
       tip.hidden = false;
       const rect = svg.getBoundingClientRect();
-      const px = (x / W) * rect.width;
-      tip.style.left = `${Math.min(px + 12, rect.width - tip.offsetWidth)}px`;
-      tip.style.top = `${svg.offsetTop + 8}px`;
+      const px = (x / W) * rect.width + (rect.left - box.getBoundingClientRect().left);
+      const room = box.clientWidth - tip.offsetWidth - 4;
+      tip.style.left = `${Math.max(4, px + 12 > room ? px - tip.offsetWidth - 12 : px + 12)}px`;
+      tip.style.top = `${rect.top - box.getBoundingClientRect().top + 8}px`;
     };
     const hide = () => {
       tip.hidden = true;

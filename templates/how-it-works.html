@@ -11,7 +11,7 @@
 
 <section class="wrap section" aria-labelledby="sim-title">
   <h2 id="sim-title">Kill a node</h2>
-  <p class="small">Three nodes, six actors. Stop a node and watch its lease run out, then another node take its actors from the bucket. The clock runs five times faster than real time; the timings it shows are the defaults and the measured medians, not a live cluster.</p>
+  <p class="small">Three nodes, six actors. Kill a node and watch its lease run out, then another node take its actors from the bucket. The clock runs five times faster than real time; the timings it shows are the defaults and the measured medians, not a live cluster.</p>
   <div class="sim" id="sim">
     <div class="sim-scroll" tabindex="0" role="region" aria-label="The diagram; scroll sideways on a narrow screen">
     <svg viewBox="0 0 760 440" role="img" aria-labelledby="sim-svg-title sim-svg-desc" xmlns="http://www.w3.org/2000/svg">
@@ -103,7 +103,7 @@
     <p>What a caller sees meanwhile is in <a href="{{ docs }}/failover-and-scaling.html">When a node dies</a>.</p>
   </div>
   <ol class="timeline">
-    <li><strong>0 s</strong>: the node's last heartbeat. Requests that reach another node for one of its actors get <code>503</code> with <code>Retry-After: 1</code>.</li>
+    <li><strong>0 s</strong>: the node's last heartbeat. A write that reaches another node for one of its actors gets <code>503</code> with <code>Retry-After: 1</code> at once; a read without a body may be kept and answered after the takeover.</li>
     <li><strong>10 s</strong>: its lease runs out. Peers stop trusting it over mutual TLS.</li>
     <li><strong>15 to about 21 s</strong>: a peer writes the fence; the dead node's actors are free.</li>
     <li><strong>Then the restore</strong>: the next request for each actor rebuilds its database from the bucket on the node it reaches, and that node answers. Measured end to end: 17.6 s at the median, 23.1 s at p99.</li>

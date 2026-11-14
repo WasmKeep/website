@@ -986,12 +986,15 @@ code {
   }
   tbody th {
     font-weight: 650;
-    min-width: 9rem;
+    min-width: 7rem;
     background: var(--surface);
-    position: sticky;
-    left: 0;
-    z-index: 1;
     border-right: 1px solid var(--rule);
+    @media (min-width: 48rem) {
+      min-width: 9rem;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+    }
   }
   tr.us th,
   tr.us td {

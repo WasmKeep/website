@@ -110,9 +110,10 @@
     n.dead.textContent = "fenced";
     const live = ids.filter((id) => nodes[id].alive);
     say(`a peer writes node ${dead}'s fence: its actors are free.`, sinceKill());
-    let k = 0;
     for (const a of actors.filter((x) => x.node === dead)) {
-      const to = live[k++ % live.length];
+      // The next request for it reaches some node; draw the least busy.
+      const count = (id) => actors.filter((x) => x.node === id).length;
+      const to = live.reduce((best, id) => (count(id) < count(best) ? id : best), live[0]);
       a.node = to;
       a.slot = freeSlot(to);
       setState(a, "restoring");
@@ -144,11 +145,14 @@
     const a = actors.find((x) => x.addr === target.value);
     const live = ids.filter((id) => nodes[id].alive);
     const entry = live[Math.floor(Math.random() * live.length)];
-    if (a.state !== "serving") {
-      const why = !fenced
-        ? "the actor's node did not answer; retry"
-        : "the actor is being restored on another node; retry";
-      say(`write to ${a.addr} via node ${entry}: 503, Retry-After: 1 (${why}).`, killedAt === null ? undefined : sinceKill());
+    if (a.state === "stranded") {
+      // A write has a body: it is never kept for later, so it gets a 503 at once.
+      say(`write to ${a.addr} via node ${entry}: 503, Retry-After: 1 (its node is not reachable yet; retry).`, sinceKill());
+      return;
+    }
+    if (a.state === "restoring") {
+      a.pending = true;
+      say(`write to ${a.addr} via node ${entry}: waits while node ${a.node} restores it from the bucket.`, sinceKill());
       return;
     }
     const [ax, ay] = slotPos(a.node, a.slot);
@@ -213,6 +217,10 @@
         if (a.state === "restoring" && now >= a.readyAt) {
           setState(a, "serving");
           say(`${a.addr} restored from the bucket on node ${a.node}: writable again.`, sinceKill());
+          if (a.pending) {
+            a.pending = false;
+            say(`the waiting write to ${a.addr} is committed and acknowledged once the bucket has it.`, sinceKill());
+          }
         }
       }
       const waiting = actors.some((a) => a.state !== "serving");
