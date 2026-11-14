@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} - {{ config.title }}{% endblock title %}
+{% block description %}{{ page.description }}{% endblock description %}
+{% block content %}
+{%- set docs = config.extra.docs -%}
+{%- set blob = config.extra.blob -%}
+<header class="wrap page-head">
+  <h1>What would it cost?</h1>
+  <p class="lead">At small and medium scale, Cloudflare Durable Objects is likely as cheap as three servers and a bucket, or cheaper. Self-hosting starts to pay with many row writes, a lot of stored data, or actors that cannot hibernate, and only on a bucket that does not bill per request. Put in your own numbers.</p>
+  <p class="small">Every price was read on the vendor's own page on 2026-11-14, before tax, and is linked below. Euros and dollars are never added together or drawn on one axis: we do not convert currencies.</p>
+</header>
+
+<section class="wrap section" aria-labelledby="calc-title">
+  <h2 id="calc-title">Break-even calculator</h2>
+  <noscript><p class="callout warn">The calculator needs JavaScript. The prices and the formulas it uses are listed below the calculator.</p></noscript>
+  <div class="calc" id="calc" hidden>
+    <form class="calc-form" id="calc-form" aria-labelledby="calc-title">
+      <div class="presets" role="group" aria-label="Start from a scenario">
+        <button type="button" data-preset="api50" aria-pressed="true">API, 50 ms</button>
+        <button type="button" data-preset="api500">API, 500 ms</button>
+        <button type="button" data-preset="chat">Chat</button>
+        <button type="button" data-preset="saas">SaaS tenants</button>
+      </div>
+      <p class="small" id="preset-note" aria-live="polite"></p>
+      <fieldset>
+        <legend>Your workload, per month</legend>
+        <label for="in-req">Requests</label>
+        <input id="in-req" name="req" type="number" min="0" step="1000000" inputmode="numeric">
+        <span class="hint">HTTP requests, each reaching one actor (one Worker request and one Durable Object request on Cloudflare).</span>
+        <label for="in-wshare">Requests that write, %</label>
+        <input id="in-wshare" name="wshare" type="number" min="0" max="100" step="1">
+        <label for="in-rows">Rows written per write</label>
+        <input id="in-rows" name="rows" type="number" min="0" step="1">
+        <span class="hint">Cloudflare bills rows; a WasmKeep write is about 1.03 bucket PUTs whatever its rows.</span>
+        <label for="in-rread">Rows read per request</label>
+        <input id="in-rread" name="rread" type="number" min="0" step="1">
+        <label for="in-msgs">Incoming WebSocket messages</label>
+        <input id="in-msgs" name="msgs" type="number" min="0" step="1000000" inputmode="numeric">
+        <span class="hint">Each one writes. Cloudflare bills them 20 to 1 as requests.</span>
+        <label for="in-conns">WebSocket connections</label>
+        <input id="in-conns" name="conns" type="number" min="0" step="10000" inputmode="numeric">
+        <label for="in-rconn">Rows read per connection</label>
+        <input id="in-rconn" name="rconn" type="number" min="0" step="1">
+        <label for="in-gb">Stored data, GB</label>
+        <input id="in-gb" name="gb" type="number" min="0" step="1">
+        <label for="in-awake">Actors that never hibernate</label>
+        <input id="in-awake" name="awake" type="number" min="0" step="1">
+        <span class="hint">For example a room holding WebSockets without Cloudflare's hibernation API: billed for duration all month.</span>
+        <label for="in-wall">Billed wall-clock per request or message, ms</label>
+        <input id="in-wall" name="wall" type="number" min="0" step="1">
+        <label for="in-cpu">Worker CPU time per request, ms</label>
+        <input id="in-cpu" name="cpu" type="number" min="0" step="0.5">
+      </fieldset>
+      <fieldset>
+        <legend>Your servers and bucket</legend>
+        <label for="in-vps">Three VPS</label>
+        <select id="in-vps" name="vps">
+          <option value="ovh2">OVHcloud VPS-2 (4 vCores, 8 GB): US$</option>
+          <option value="ovh1">OVHcloud VPS-1 (2 vCores, 4 GB): US$</option>
+          <option value="cx33">Hetzner CX33 (4 vCPU, 8 GB): EUR</option>
+          <option value="cx23">Hetzner CX23 (2 vCPU, 4 GB): EUR</option>
+        </select>
+        <label for="in-bucket">Bucket</label>
+        <select id="in-bucket" name="bucket">
+          <option value="ovhos">OVHcloud Object Storage, One Zone: US$</option>
+          <option value="r2">Cloudflare R2, Standard: US$</option>
+          <option value="hzos">Hetzner Object Storage: EUR (not tested with WasmKeep)</option>
+        </select>
+      </fieldset>
+    </form>
+
+    <div class="calc-out">
+      <p class="verdict" id="verdict" aria-live="polite"></p>
+      <div class="bills">
+        <div class="bill">
+          <h3>Cloudflare Workers Paid + Durable Objects</h3>
+          <p class="total" id="cf-total"></p>
+          <table><tbody id="cf-lines"></tbody></table>
+        </div>
+        <div class="bill self">
+          <h3>WasmKeep: three VPS and a bucket</h3>
+          <p class="total" id="self-total"></p>
+          <table><tbody id="self-lines"></tbody></table>
+        </div>
+      </div>
+      <p class="small" id="capacity"></p>
+      <div id="charts"></div>
+      <p class="small">Both axes are logarithmic. The x axis scales your traffic (requests, messages, connections and their writes) from a hundredth to a hundred times; stored data and always-awake actors stay as you set them.</p>
+      <details>
+        <summary class="small">The chart as a table</summary>
+        <div class="table-scroll"><table class="price-table" id="sweep-table"></table></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="band" aria-labelledby="out-title">
+  <div class="wrap rail">
+    <div class="rail-head">
+      <h2 id="out-title">What the bill leaves out</h2>
+      <p>The servers' price is the smaller part of running them.</p>
+    </div>
+    <div class="not-in-bill">
+      <ul>
+        <li><strong>Your time.</strong> Patching, monitoring, certificates, backups of the bucket, on-call, and upgrades of pre-alpha software.</li>
+        <li><strong>No edge network.</strong> A cluster runs in one region; no global routing, DDoS protection or WAF in front of it unless you add them.</li>
+        <li><strong>Failover takes seconds.</strong> A dead node's actors are writable again after 17.6 s at the median and 27.1 s at worst in the 0.4.1 release candidate's 2-hour soak, and after 33.7 s at worst in the 12-hour soak.</li>
+        <li><strong>The bucket is a hard dependency.</strong> A node cut off from it for 8 s stops serving its actors.</li>
+        <li><strong>No SLA, no compliance claims.</strong> Nobody answers for your uptime but you.</li>
+        <li><strong>Egress and taxes.</strong> Not in either bill. R2 and OVHcloud do not charge egress; the VPS include traffic as their pages state.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="wrap rail" aria-labelledby="assume-title">
+  <div class="rail-head">
+    <h2 id="assume-title">Assumptions</h2>
+    <p>Where a number comes from, and what it is not.</p>
+  </div>
+  <div class="prose">
+    <ul>
+      <li><strong>Three small VPS can carry the workload: assumed, not measured.</strong> The busiest of our soaks wrote about 60 acknowledged durable writes a second through three OVHcloud VPS-2 (643,891 in 3 hours, <a href="{{ blob }}/bench/results/2026-11-13-648c2d1-soak-ovh-bhs-3vps-3h.csv">648c2d1</a>; the 12-hour run carried 53, <a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">b849bfe</a>), with writers that wait for each answer. That is not a capacity limit, and no run measured one: past it the chart draws the self-hosted line grey and dotted. Each actor's database also lives on the disk of the node that runs it; the calculator says when your data outgrows the VPS disks.</li>
+      <li><strong>About 1.03 bucket PUTs per durable write</strong>, snapshots included, measured in a 12-hour soak (<a href="{{ docs }}/benchmarks.html#three-nodes-against-a-real-bucket">benchmarks</a>). The calculator applies it to every write.</li>
+      <li><strong>The floor at rest, per node:</strong> 0.334 PUT, 1.10 LIST and 1.33 GET a second, measured on three idle VPS for ten minutes (<a href="{{ config.extra.github }}/blob/main/bench/results/2026-11-14-0bf0547-idle-bucket-requests-ovh-bhs-3vps-10min.csv">CSV</a>). The node's secrets read, every 3 s, was not counted then, so the calculator uses the 1.67 GET a second actually requested; the rates follow from fixed periods in the code (<a href="{{ docs }}/benchmarks.html#bucket-requests-at-rest">bucket requests at rest</a>). For three nodes over 30 days: about 2.6 million PUTs, 8.6 million LISTs and 13 million GETs; on R2 the PUTs and LISTs alone are about 11.2 million Class A requests, about US$46 a month before any traffic.</li>
+      <li><strong>Cloudflare duration</strong> is billed at 128 MB per active object; the calculator counts each request's wall-clock time as active, and every actor that never hibernates for the whole month. Requests that run on one object at the same time share its duration, so busy objects cost less than this.</li>
+      <li><strong>Cloudflare rounding:</strong> usage above each allowance is rounded up to the next billable unit, as its page says. The Durable Objects page gave January 2026 as the start of SQLite storage billing; the calculator assumes it is billed.</li>
+      <li><strong>A month is 30 days.</strong> The bucket holds about your stored data; history and snapshots on top of it are not modelled. Hetzner bills each object as at least 64 KB, which the calculator does not model either.</li>
+      <li><strong>OVHcloud prices are "from" prices</strong> on its international site, in US dollars; prices differ by country site, and the commitment they assume is not stated. Hetzner's CX plans showed "currently unavailable" on 2026-11-14.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="band band-end" aria-labelledby="prices-title">
+  <div class="wrap section">
+    <h2 id="prices-title">Prices used, read on 2026-11-14</h2>
+    <p class="small">Before tax. Each in its vendor's currency, as its page shows it.</p>
+    <div class="table-scroll">
+      <table class="price-table">
+        <thead><tr><th scope="col">Item</th><th scope="col">Price</th><th scope="col">Included</th><th scope="col">Page</th></tr></thead>
+        <tbody>
+          <tr><td>Workers Paid plan</td><td>US$5 / month</td><td>10 M requests, 30 M CPU-ms</td><td rowspan="3"><a href="https://developers.cloudflare.com/workers/platform/pricing/">Workers pricing</a></td></tr>
+          <tr><td>Workers requests</td><td>US$0.30 / M</td><td></td></tr>
+          <tr><td>Workers CPU time</td><td>US$0.02 / M CPU-ms</td><td></td></tr>
+          <tr><td>Durable Objects requests</td><td>US$0.15 / M</td><td>1 M</td><td rowspan="5"><a href="https://developers.cloudflare.com/durable-objects/platform/pricing/">Durable Objects pricing</a></td></tr>
+          <tr><td>Durable Objects duration (128 MB per object)</td><td>US$12.50 / M GB-s</td><td>400,000 GB-s</td></tr>
+          <tr><td>SQLite rows read</td><td>US$0.001 / M</td><td>25 billion</td></tr>
+          <tr><td>SQLite rows written</td><td>US$1.00 / M</td><td>50 M</td></tr>
+          <tr><td>SQLite stored data</td><td>US$0.20 / GB-month</td><td>5 GB-month</td></tr>
+          <tr><td>R2 Standard storage</td><td>US$0.015 / GB-month</td><td>10 GB-month</td><td rowspan="3"><a href="https://developers.cloudflare.com/r2/pricing/">R2 pricing</a></td></tr>
+          <tr><td>R2 Class A (PUT, LIST)</td><td>US$4.50 / M</td><td>1 M</td></tr>
+          <tr><td>R2 Class B (GET)</td><td>US$0.36 / M</td><td>10 M</td></tr>
+          <tr><td>OVHcloud Object Storage, One Zone, Standard</td><td>US$0.0081103 / GiB-month</td><td>API requests and traffic free</td><td><a href="https://www.ovhcloud.com/en/public-cloud/prices/">Public Cloud prices</a></td></tr>
+          <tr><td>OVHcloud VPS-1 (2 vCores, 4 GB)</td><td>from US$4.54 / month</td><td></td><td rowspan="2"><a href="https://www.ovhcloud.com/en/vps/">OVHcloud VPS</a></td></tr>
+          <tr><td>OVHcloud VPS-2 (4 vCores, 8 GB)</td><td>from US$8.50 / month</td><td></td></tr>
+          <tr><td>Hetzner CX23 (2 vCPU, 4 GB)</td><td>€5.99 / month</td><td>20 TB traffic</td><td rowspan="2"><a href="https://www.hetzner.com/cloud/cost-optimized/">Hetzner cost-optimized</a></td></tr>
+          <tr><td>Hetzner CX33 (4 vCPU, 8 GB)</td><td>€8.99 / month</td><td>20 TB traffic</td></tr>
+          <tr><td>Hetzner Object Storage</td><td>€6.49 / month</td><td>1 TB storage, 1 TB egress; API requests free</td><td rowspan="2"><a href="https://www.hetzner.com/storage/object-storage/">Hetzner Object Storage</a></td></tr>
+          <tr><td>Hetzner Object Storage, beyond 1 TB</td><td>€0.0087 / TB-hour</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small">Left out because the price could not be read on the vendor's own page: AWS S3 (its tables did not load for us) and OVHcloud's other storage classes. Backblaze B2 was left out as it has not been tested with WasmKeep. R2 and OVHcloud Object Storage are the buckets WasmKeep's soaks ran against.</p>
+  </div>
+</section>
+{% endblock content %}
+{% block scripts %}
+<script src="{{ get_url(path='cost.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
+{% endblock scripts %}

@@ -1,0 +1,17 @@
+{% raw %}<span class="cm">// examples/zig-counter: the same counter, one actor per name.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> init() !void {
+    _ = <span class="kw">try</span> wk.exec(<span class="st">"CREATE TABLE IF NOT EXISTS counter (id INTEGER PRIMARY KEY CHECK (id = 1), value INTEGER NOT NULL)"</span>, .{});
+    _ = <span class="kw">try</span> wk.exec(<span class="st">"INSERT OR IGNORE INTO counter (id, value) VALUES (1, 0)"</span>, .{});
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> fetch(req: *wk.Request) !wk.Response {
+<span class="cm">    // Committed locally, uploaded right after the event. To answer only</span>
+<span class="cm">    // once the bucket has it, commit with wk.execDurable.</span>
+    <span class="kw">const</span> value = <span class="kw">if</span> (std.mem.eql(u8, req.method, <span class="st">"GET"</span>))
+        <span class="kw">try</span> wk.queryInt(<span class="st">"SELECT value FROM counter WHERE id = 1"</span>, .{})
+    <span class="kw">else</span> <span class="kw">if</span> (std.mem.eql(u8, req.method, <span class="st">"POST"</span>))
+        <span class="kw">try</span> wk.queryInt(<span class="st">"UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value"</span>, .{})
+    <span class="kw">else</span>
+        <span class="kw">return</span> wk.reply(405, <span class="st">"use GET or POST\n"</span>, .{});
+    <span class="kw">return</span> wk.reply(200, <span class="st">"{d}\n"</span>, .{value});
+}{% endraw %}

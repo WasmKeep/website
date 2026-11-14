@@ -1,0 +1,63 @@
+<div class="sim" id="{{ sim_id }}" data-sim>
+    <div class="sim-fig">
+    <svg viewBox="0 0 760 440" role="img" aria-labelledby="{{ sim_id }}-t {{ sim_id }}-d" xmlns="http://www.w3.org/2000/svg">
+      <title id="{{ sim_id }}-t">Three WasmKeep nodes on one bucket</title>
+      <desc id="{{ sim_id }}-d">A load balancer spreads requests over nodes a, b and c. Each node runs the front and holds two actors, each with its own SQLite database. The nodes talk mutual TLS to each other and replicate every database to one S3-compatible bucket, which also holds each node's lease.</desc>
+      <rect class="dg-lb" x="150" y="12" width="460" height="36" rx="6"/>
+      <text class="dg-text" x="380" y="35" text-anchor="middle">Load balancer: clients reach any node</text>
+      {%- set ids = ["a", "b", "c"] %}
+      {%- for i in [0, 1, 2] %}
+      {%- set x = 20 + i * 260 %}
+      <path class="dg-link" d="M{{ x + 100 }} 48V80"/>
+      <g class="node-g" id="node-{{ ids[i] }}">
+        <rect class="dg-node" x="{{ x }}" y="80" width="200" height="210" rx="8"/>
+        <text class="dg-text" x="{{ x + 12 }}" y="101">Node {{ ids[i] }}</text>
+        <text class="dg-small" x="{{ x + 100 }}" y="100" text-anchor="end" data-lease-label>lease</text>
+        <rect class="dg-lease-bg" x="{{ x + 104 }}" y="92" width="84" height="8" rx="4"/>
+        <rect class="dg-lease" x="{{ x + 104 }}" y="92" width="84" height="8" rx="4" data-lease/>
+        <rect class="dg-front" x="{{ x + 12 }}" y="112" width="176" height="30" rx="5"/>
+        <text class="dg-small" x="{{ x + 100 }}" y="131" text-anchor="middle">front: pages and APIs</text>
+        <text class="dead-mark" x="{{ x + 100 }}" y="160" text-anchor="middle" data-dead></text>
+      </g>
+      <path class="dg-repl" d="M{{ x + 100 }} 290V360"/>
+      {%- endfor %}
+      <path class="dg-mtls" d="M220 127H280"/>
+      <path class="dg-mtls" d="M480 127H540"/>
+      <text class="dg-small" x="250" y="120" text-anchor="middle">mTLS</text>
+      <text class="dg-small" x="510" y="120" text-anchor="middle">mTLS</text>
+      <text class="dg-small" x="128" y="330">replicated</text>
+      <rect class="dg-bucket" x="20" y="360" width="720" height="60" rx="8"/>
+      <text class="dg-text" x="380" y="385" text-anchor="middle">Your S3-compatible bucket</text>
+      <text class="dg-small" x="380" y="405" text-anchor="middle">node leases, who holds each actor, every actor's history</text>
+      {%- set actors = [["room/42", 0, 0], ["user/ada", 0, 1], ["tenant/acme", 1, 0], ["device/7", 1, 1], ["room/9", 2, 0], ["user/kim", 2, 1]] %}
+      {%- for a in actors %}
+      {%- set sx = 30 + a[1] * 260 + (a[2] % 2) * 95 %}
+      {%- set sy = 170 %}
+      <g class="actor-g" data-addr="{{ a[0] }}" data-node="{{ ids[a[1]] }}" data-slot="{{ a[2] }}" transform="translate({{ sx }} {{ sy }})">
+        <rect class="dg-actor" x="0" y="0" width="88" height="48" rx="5"/>
+        <text class="dg-mono" x="6" y="19">{{ a[0] }}</text>
+        <path class="dg-db" d="M8 29v10c0 1.6 3 2.8 6 2.8s6-1.2 6-2.8V29"/>
+        <ellipse class="dg-db" cx="14" cy="29" rx="6" ry="2.4"/>
+        <text class="dg-small" x="25" y="40" data-state>SQLite</text>
+      </g>
+      {%- endfor %}
+      <circle class="dg-packet" r="6" cx="-20" cy="-20" data-packet/>
+    </svg>
+    </div>
+    <div class="sim-controls" data-controls hidden>
+      <button type="button" class="kill" data-kill="a">{{<icon name="x" />}}Kill node a</button>
+      <button type="button" class="kill" data-kill="b">{{<icon name="x" />}}Kill node b</button>
+      <button type="button" class="kill" data-kill="c">{{<icon name="x" />}}Kill node c</button>
+      <button type="button" data-restart disabled>Restart the dead node</button>
+    </div>
+    <div class="sim-controls" data-controls hidden>
+      <label for="{{ sim_id }}-target" class="small">Durable write to</label>
+      <select id="{{ sim_id }}-target" data-target>
+        {%- for a in actors %}<option>{{ a[0] }}</option>{% endfor %}
+      </select>
+      <button type="button" data-write>{{<icon name="arrow" />}}Send it</button>
+    </div>
+    <p class="sim-clock" data-clock tabindex="-1">No node killed yet.</p>
+    <ol class="sim-log" data-log aria-live="polite" aria-label="What happened"></ol>
+    <p class="sim-note">Measured on three VPS next to the bucket. 0.4.1 release candidate, 2 hours, 39 kills: writable again after 17.6 s at the median, 23.1 s at p99, 27.1 s at worst (<a href="{{ config.extra.blob }}/bench/results/2026-11-14-0bf0547-soak-ovh-bhs-3vps-2h-0.4.1-rc.csv">CSV</a>). 12 hours, 239 kills: 17.7 s at the median, 33.7 s at worst (<a href="{{ config.extra.blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">CSV</a>). The demo draws each restore at 1.5 to 3.5 s; real restores took 1 to 6 s for most actors, more for long histories.</p>
+  </div>

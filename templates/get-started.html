@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} - {{ config.title }}{% endblock title %}
+{% block description %}{{ page.description }}{% endblock description %}
+{% block content %}
+{%- set docs = config.extra.docs -%}
+{%- set v = config.extra.release -%}
+<header class="wrap page-head">
+  <h1>Get started</h1>
+  <p class="lead">From nothing to a counter that survives a restart, with no toolchain, then your first actor in your language. The tutorials in the documentation take it from there.</p>
+</header>
+<div class="wrap rail rail-rev">
+  <ol class="steps">
+    <li>
+      <h2>Install the binary</h2>
+      <p>On Linux, x86_64 or aarch64 (glibc 2.28 or newer). Name the version: releases are pre-releases for now, so there is no <code>latest</code>.</p>
+      {% include "partials/install.html" %}
+      <p class="small">Every file of a release is signed: <a href="{{ docs }}/deploy/single-node.html">check a download</a> before you trust it. On macOS and Windows, use the image <code>ghcr.io/wasmkeep/wasmkeep:{{ v }}</code> or build from source.</p>
+    </li>
+    <li>
+      <h2>Serve the counter</h2>
+      <p>A release carries the counter example already built and signed, so this needs no toolchain. In the same shell as step 1, which set <code>$u</code> and <code>$v</code>:</p>
+      <pre class="term" data-copy tabindex="0"><code>curl -fsSLO "$u/releases/download/v$v/counter.wasm"
+wasmkeep serve --actor counter=counter.wasm</code></pre>
+      <p>In another terminal:</p>
+      <pre class="term" data-copy tabindex="0"><code>curl -X POST localhost:8080/actor/counter/alice   <span class="cm"># 1</span>
+curl -X POST localhost:8080/actor/counter/alice   <span class="cm"># 2</span>
+curl localhost:8080/actor/counter/bob             <span class="cm"># 0, a separate actor</span></code></pre>
+      <p>Each name is its own actor with its own SQLite database under <code>.wasmkeep/data/</code>. Restart the server and the counts are still there.</p>
+    </li>
+    <li>
+      <h2>Write your own actor</h2>
+      <p>Install the SDK of your language, at the version of your server, then follow its guide.</p>
+      <div class="table-scroll">
+        <table class="price-table">
+          <thead><tr><th scope="col">Language</th><th scope="col">Install</th><th scope="col">Start from</th></tr></thead>
+          <tbody>
+            <tr><td>Rust</td><td>cargo add wasmkeep-sdk</td><td><a href="{{ docs }}/tutorials/first-actor.html">Your first actor in 10 minutes</a></td></tr>
+            <tr><td>TypeScript</td><td>npm install @wasmkeep/sdk</td><td><a href="{{ config.extra.tree }}/sdks/typescript">its README</a></td></tr>
+            <tr><td>Python</td><td>pip install wasmkeep</td><td><a href="{{ config.extra.tree }}/sdks/python">its README</a></td></tr>
+            <tr><td>Go (TinyGo)</td><td>go get github.com/wasmkeep/wasmkeep/sdks/go@v{{ v }}</td><td><a href="{{ config.extra.tree }}/sdks/go">its README</a></td></tr>
+            <tr><td>C, Zig</td><td>the SDK archive from the release</td><td>the README in each archive</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small">Then develop with hot reload: <code>wasmkeep dev</code> rebuilds and swaps on every save, keeping the data.</p>
+    </li>
+    <li>
+      <h2>Follow the tutorials</h2>
+      <ul>
+        <li><a href="{{ docs }}/tutorials/first-actor.html">Your first actor</a>: a counter with its own database.</li>
+        <li><a href="{{ docs }}/tutorials/first-app.html">Your first app</a>: a front and its classes, run with <code>wasmkeep dev</code>.</li>
+        <li><a href="{{ docs }}/tutorials/one-node-to-three.html">From one node to three</a>: a cluster on one bucket, and a kill.</li>
+        <li><a href="{{ docs }}/deploy/buckets.html">Buckets</a>: which ones are soaked (R2, OVHcloud), and <code>wasmkeep cluster diagnose</code> to check yours before a cluster relies on it.</li>
+        <li><a href="{{ docs }}/tutorials/going-to-production.html">Going to production</a>, and what pre-alpha means for it.</li>
+      </ul>
+    </li>
+  </ol>
+  <aside>
+    <div class="callout">
+      <h3>See it survive a kill</h3>
+      <p>The repository's Compose example runs three nodes on one machine, sharing a MinIO bucket, with mutual TLS between them. Kill the node that runs an actor and another restores it from the bucket.</p>
+      <p><a href="{{ config.extra.tree }}/deploy/compose">deploy/compose</a></p>
+    </div>
+    <div class="callout">
+      <h3>This site's source is an example</h3>
+      <p>The site is built as a WasmKeep app: a Rust front that serves the pages and calls a counter actor. Its source is a complete app.</p>
+      <p><a href="{{ config.extra.source }}">WasmKeep/website</a></p>
+    </div>
+    <div class="callout">
+      <h3>The documentation</h3>
+      <p>Concepts, the API in every SDK, running a cluster, the security model and the benchmarks.</p>
+      <p><a href="{{ docs }}">docs.wasmkeep.dev</a></p>
+    </div>
+  </aside>
+</div>
+{% endblock content %}

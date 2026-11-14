@@ -2,8 +2,15 @@
 {% block title %}{{ page.title }} - {{ config.title }}{% endblock title %}
 {% block description %}{{ page.description or config.description }}{% endblock description %}
 {% block content %}
-<article class="prose">
+<header class="wrap page-head">
   <h1>{{ page.title }}</h1>
+  {%- if page.extra.lead %}
+  <p class="lead">{{ page.extra.lead }}</p>
+  {%- endif %}
+</header>
+<div class="wrap">
+<article class="prose">
   {{ page.content | safe }}
 </article>
+</div>
 {% endblock content %}

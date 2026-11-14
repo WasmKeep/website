@@ -65,10 +65,25 @@ status() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 header() { curl -s -D - -o /dev/null "${@:2}" | tr -d '\r' | awk -v h="$1:" 'tolower($1) == h { $1 = ""; sub(/^ /, ""); print }'; }
 
 home=$(curl -fs "$base/")
-check "GET / is the home page" "$(grep -c 'The language wall' <<<"$home")" 1
+check "GET / is the home page" "$(grep -cE 'id="?wall"?[ >]' <<<"$home")" 1
 check "GET / has the wall's counts filled in" "$(grep -c '%wall:' <<<"$home")" 0
-check "GET /how-it-works/" "$(status "$base/how-it-works/")" 200
+check "GET / has the code tabs" "$(grep -cE 'id="?code-rust"?[ >]' <<<"$home")" 1
+for page in how-it-works features compare cost get-started; do
+  check "GET /$page/" "$(status "$base/$page/")" 200
+done
 check "GET /how-it-works redirects" "$(status "$base/how-it-works")" 308
+check "the cost page lists dated prices" "$(curl -fs "$base/cost/" | grep -c 'read on 2026-11-14')" 1
+check "GET /favicon.ico" "$(header content-type "$base/favicon.ico")" "image/x-icon"
+for js in tabs.js wall.js failover.js copy.js; do
+  url=$(grep -o "/$js?h=[0-9a-f]*" <<<"$home" | head -1)
+  check "the home page loads $js" "$(header content-type "$base$url")" "text/javascript; charset=utf-8"
+done
+for pair in how-it-works:failover.js cost:cost.js; do
+  page=${pair%%:*} js=${pair#*:}
+  url=$(curl -fs "$base/$page/" | grep -o "/$js?h=[0-9a-f]*" | head -1)
+  check "/$page/ loads $js" "$(header content-type "$base$url")" "text/javascript; charset=utf-8"
+done
+check "pages forbid inline scripts and styles" "$(header content-security-policy "$base/cost/" | grep -c "default-src 'self';")" 1
 check "GET /nope is the 404 page" "$(status "$base/nope")" 404
 check "HTML is cached briefly" "$(header cache-control "$base/features/")" "public, max-age=300"
 etag=$(header etag "$base/features/")

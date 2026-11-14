@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} - {{ config.title }}{% endblock title %}
+{% block description %}{{ page.description }}{% endblock description %}
+{% block content %}
+{%- set docs = config.extra.docs -%}
+{%- set blob = config.extra.blob -%}
+<header class="wrap page-head">
+  <h1>How it works</h1>
+  <p class="lead">Every node runs the same front. Each actor lives on one node at a time, with its own SQLite database, and every database is replicated to one bucket you own. The bucket also holds the leases, so there is no consensus cluster to run.</p>
+</header>
+
+<section class="wrap section" aria-labelledby="sim-title">
+  <h2 id="sim-title">Kill a node</h2>
+  <p class="small">Three nodes, six actors. Kill a node and watch its lease run out, then another node take its actors from the bucket. The clock runs five times faster than real time; the timings it shows are the defaults and the measured medians, not a live cluster.</p>
+  {% set sim_id = "sim" %}{% include "partials/sim.html" %}
+</section>
+
+<section class="band" aria-labelledby="steps-title">
+  <div class="wrap rail">
+    <div class="rail-head">
+      <h2 id="steps-title">What the diagram shows</h2>
+      <p>The same parts, in the order a request meets them.</p>
+      <p class="small"><a href="{{ docs }}/concepts.html">Concepts</a> and <a href="{{ docs }}/cluster.html">Running a cluster</a> have the details and the limits.</p>
+    </div>
+    <div class="prose">
+      <h3>A front on every node</h3>
+      <p>An app is a front and a set of actor classes, deployed together as one version. The front is a stateless WebAssembly component that serves pages and APIs; any front calls any actor by its address, like <code>room/42</code>, and can batch several calls into one.</p>
+      <h3>One node per actor, found through the bucket</h3>
+      <p>The node a request lands on finds the node that holds the actor and forwards the call once, over mutual TLS. A node takes an actor only when the bucket says nobody else holds it, so there is one writer per actor. Idle actors are given up after 30 s by default, and their next event starts them wherever it arrives.</p>
+      <h3>One SQLite database per actor</h3>
+      <p>Each actor's database is on its node's disk, written with plain SQL, one event at a time. What each event commits is uploaded to the bucket right after the event; a write made with <code>exec-durable</code> answers only once the bucket holds it.</p>
+      <h3>The bucket holds the leases</h3>
+      <p>Each node renews one lease in the bucket. When a node dies, a peer that has seen its heartbeat unchanged writes a fence once 15 s have passed (the 10 s lease plus 5 s of grace), and its actors are free. The wait is what keeps one writer per actor: a node that is only slow must stop acting on its own before anyone else starts.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap rail" aria-labelledby="death-title">
+  <div class="rail-head">
+    <h2 id="death-title">When a node dies, with the default timings</h2>
+    <p>What a caller sees meanwhile is in <a href="{{ docs }}/failover-and-scaling.html">When a node dies</a>.</p>
+  </div>
+  <ol class="timeline">
+    <li><strong>0 s</strong>: the node's last heartbeat. A write that reaches another node for one of its actors gets <code>503</code> with <code>Retry-After: 1</code> at once; a read without a body may be kept and answered after the takeover.</li>
+    <li><strong>10 s</strong>: its lease runs out. Peers stop trusting it over mutual TLS.</li>
+    <li><strong>15 to about 21 s</strong>: a peer writes the fence; the dead node's actors are free.</li>
+    <li><strong>Then the restore</strong>: the next request for each actor rebuilds its database from the bucket on the node it reaches, and that node answers. Measured end to end: 17.6 s at the median, 23.1 s at p99 and 27.1 s at worst in the 0.4.1 release candidate's 2-hour soak; 33.7 s at worst over 239 kills in the 12-hour soak.</li>
+    <li><strong>Alarms</strong> of the dead node's actors fire elsewhere, late: 20.7 s at the median in the same run. They fire at least once.</li>
+  </ol>
+</section>
+
+<section class="band band-end" aria-labelledby="not-title">
+  <div class="wrap rail">
+    <div class="rail-head">
+      <h2 id="not-title">What it does not do</h2>
+    </div>
+    <div class="prose">
+      <ul>
+        <li><strong>No edge network.</strong> A cluster runs in one region, next to its bucket; there is no global routing to a nearby location.</li>
+        <li><strong>No instant failover.</strong> A dead node's actors wait for its lease and the grace period, then a restore: seconds, measured above.</li>
+        <li><strong>The bucket is a hard dependency.</strong> A node cut off from it for 8 s stops serving its actors until it reaches the bucket again.</li>
+        <li><strong>Not a database for queries across actors.</strong> Each actor's data is fast to reach through it and slow to query across; keep Postgres for reporting and search.</li>
+      </ul>
+      <h3>This site's source</h3>
+      <p>This site is built as a WasmKeep app (<a href="{{ config.extra.source }}">source</a>): a Rust front that serves the pages, built with Zola and embedded at build time, and the language wall's API. The counter on the wall is an actor of its language's class, <code>wall</code> by name, reached only by the front.</p>
+    </div>
+  </div>
+</section>
+{% endblock content %}
+{% block scripts %}
+<script src="{{ get_url(path='failover.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
+{% endblock scripts %}

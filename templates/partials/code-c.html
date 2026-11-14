@@ -1,0 +1,19 @@
+{% raw %}<span class="cm">/* examples/c-counter: the same counter, one actor per name. */</span>
+<span class="kw">void</span> wk_init(<span class="kw">void</span>) {
+  wk_exec(<span class="st">"CREATE TABLE IF NOT EXISTS counter"</span>
+          <span class="st">" (id INTEGER PRIMARY KEY CHECK (id = 1), value INTEGER NOT NULL)"</span>);
+  wk_exec(<span class="st">"INSERT OR IGNORE INTO counter (id, value) VALUES (1, 0)"</span>);
+}
+
+wk_response wk_fetch(wk_request *req) {
+  <span class="kw">int64_t</span> value;
+  <span class="kw">if</span> (strcmp(req-&gt;method, <span class="st">"GET"</span>) == 0)
+    value = wk_query_int(<span class="st">"SELECT value FROM counter WHERE id = 1"</span>);
+  <span class="kw">else</span> <span class="kw">if</span> (strcmp(req-&gt;method, <span class="st">"POST"</span>) == 0)
+<span class="cm">    /* Committed locally, uploaded right after the event. To answer only</span>
+<span class="cm">     * once the bucket has it, commit with wk_exec_durable. */</span>
+    value = wk_query_int(<span class="st">"UPDATE counter SET value = value + 1 WHERE id = 1 RETURNING value"</span>);
+  <span class="kw">else</span>
+    <span class="kw">return</span> wk_reply(405, <span class="st">"use GET or POST\n"</span>);
+  <span class="kw">return</span> wk_reply(200, <span class="st">"%lld\n"</span>, (long long)value);
+}{% endraw %}

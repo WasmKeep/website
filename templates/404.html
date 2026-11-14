@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Not found - {{ config.title }}{% endblock title %}
 {% block content %}
-<article class="prose">
+<header class="wrap page-head">
   <h1>Not found</h1>
-  <p>There is no page at this address. The <a href="/">home page</a> and the
+  <p class="lead">There is no page at this address.</p>
+</header>
+<div class="wrap"><div class="prose">
+  <p>The <a href="/">home page</a>, <a href="/get-started/">Get started</a> and the
   <a href="{{ config.extra.docs }}">documentation</a> may have what you were looking for.</p>
-</article>
+</div></div>
 {% endblock content %}

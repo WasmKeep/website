@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} - {{ config.title }}{% endblock title %}
+{% block description %}{{ page.description }}{% endblock description %}
+{% block content %}
+{%- set docs = config.extra.docs -%}
+<header class="wrap page-head">
+  <h1>What works today</h1>
+  <p class="lead">Each part below has tests that run before every merge. WasmKeep is pre-alpha: it is measured, and it does not yet carry real users' traffic.</p>
+</header>
+
+<section class="wrap section" aria-label="Features">
+  <ul class="features">
+    <li class="feat-wide">
+      <h2>{{<icon name="database" />}}An SQLite database per actor</h2>
+      <p>Each actor owns its state in its own database, queried with plain SQL, and handles one event at a time, in arrival order: two requests to the same actor never interleave.</p>
+      <a href="{{ docs }}/concepts.html">Concepts</a>
+    </li>
+    <li class="feat-wide">
+      <h2>{{<icon name="cloud" />}}Durable writes, acknowledged once in the bucket</h2>
+      <p>A write made with <code>exec-durable</code> answers only once the bucket holds it, so it survives its node. A plain <code>exec</code> answers sooner and is uploaded right after the event, so it can be lost with its node in that moment.</p>
+      <a href="{{ docs }}/cluster.html">The replication contract</a>
+    </li>
+    <li>
+      <h2>{{<icon name="server" />}}Failover without a consensus cluster</h2>
+      <p>The bucket holds the node leases, the owners and each actor's history. A dead node's actors are free 15 to about 21 s after its last heartbeat, then restored elsewhere.</p>
+      <a href="{{ docs }}/failover-and-scaling.html">When a node dies</a>
+    </li>
+    <li>
+      <h2>{{<icon name="bucket" />}}Your S3-compatible bucket</h2>
+      <p>Soaked on Cloudflare R2 and OVHcloud Object Storage. Any other S3-compatible store: check it with <code>wasmkeep cluster diagnose</code>. Google Cloud Storage and Azure Blob Storage are not supported yet.</p>
+      <a href="{{ docs }}/deploy/buckets.html">Buckets</a>
+    </li>
+    <li>
+      <h2>{{<icon name="moon" />}}Hibernation</h2>
+      <p>Idle actors leave memory and wake in about a millisecond, with their data, their pending alarm and their open WebSockets.</p>
+      <a href="{{ docs }}/concepts.html">Life cycle</a>
+    </li>
+    <li>
+      <h2>{{<icon name="languages" />}}Any language that compiles to WebAssembly</h2>
+      <p>Standard WASI 0.2 components. Rust, TypeScript, Python, C, Zig and Go (TinyGo) have SDKs and pass the same tests; standard Go, D and MoonBit are experimental.</p>
+      <a href="{{ docs }}/languages.html">Languages</a>
+    </li>
+    <li>
+      <h2>{{<icon name="layers" />}}Apps with a front</h2>
+      <p>A stateless front serves pages and APIs and calls the app's actors, several in one batch, deployed with its classes as one version.</p>
+      <a href="{{ docs }}/project-file.html">The project file</a>
+    </li>
+    <li>
+      <h2>{{<icon name="clock" />}}Alarms and WebSockets</h2>
+      <p>Alarms fire at least once, also when their node dies. WebSockets stay open while their actor sleeps.</p>
+      <a href="{{ docs }}/concepts.html">Concepts</a>
+    </li>
+    <li>
+      <h2>{{<icon name="shield" />}}A sandbox per actor, mutual TLS between nodes</h2>
+      <p>CPU, memory and SQL limits per actor, no filesystem, no data but its own. Every actor of a node shares one process: not yet a boundary for hostile tenants.</p>
+      <a href="{{ docs }}/security.html">Security model</a>
+    </li>
+    <li>
+      <h2>{{<icon name="terminal" />}}Built to operate</h2>
+      <p><code>cluster status</code> reads a cluster from the bucket alone, <code>cluster drain</code> empties a node, <code>secrets</code> keeps an app's secrets sealed in the bucket.</p>
+      <a href="{{ docs }}/cluster.html">Running a cluster</a>
+    </li>
+    <li>
+      <h2>{{<icon name="check" />}}Signed releases, Apache-2.0</h2>
+      <p>One binary per node. Every release file has a Sigstore bundle and each binary a CycloneDX SBOM, built and signed by CI.</p>
+      <a href="{{ docs }}/deploy/single-node.html">Check a download</a>
+    </li>
+  </ul>
+  <div class="callout warn">
+    <h2>Not yet</h2>
+    <p>Weeks of real traffic, a run against AWS S3, an independent security audit, and a sandbox tier for tenants who do not trust each other. What is left is on the <a href="{{ config.extra.github }}/blob/main/ROADMAP.md">roadmap</a>.</p>
+  </div>
+</section>
+{% endblock content %}
