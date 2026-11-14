@@ -18,13 +18,16 @@
   // Measured inputs (see "Assumptions" on the page).
   const PUT_PER_WRITE = 1.03;
   const IDLE = { put: 0.334, list: 1.1, get: 1.67 }; // per node and second, idle
-  const SOAK_WRITES_PER_S = 2306192 / 43212; // b849bfe, 12 h
+  // The highest rate of acknowledged durable writes among the soaks the
+  // site cites: 643,891 in 10,804.5 s (648c2d1, 3 h); b849bfe carried
+  // 53.4 a second, 0bf0547 52.3.
+  const SOAK_WRITES_PER_S = 643891 / 10804.5;
 
   const VPS = {
-    ovh1: { name: "3 x OVHcloud VPS-1", cur: "USD", price: 4.54 },
-    ovh2: { name: "3 x OVHcloud VPS-2", cur: "USD", price: 8.5 },
-    cx23: { name: "3 x Hetzner CX23", cur: "EUR", price: 5.99 },
-    cx33: { name: "3 x Hetzner CX33", cur: "EUR", price: 8.99 },
+    ovh1: { name: "3 x OVHcloud VPS-1", cur: "USD", price: 4.54, disk: 40 },
+    ovh2: { name: "3 x OVHcloud VPS-2", cur: "USD", price: 8.5, disk: 75 },
+    cx23: { name: "3 x Hetzner CX23", cur: "EUR", price: 5.99, disk: 40 },
+    cx33: { name: "3 x Hetzner CX33", cur: "EUR", price: 8.99, disk: 80 },
   };
 
   const PRESETS = {
@@ -86,9 +89,9 @@
     return lines.reduce((s, l) => s + l[1], 0);
   }
 
-  const money = (v, cur) => {
+  const money = (v, cur, cents) => {
     const sym = cur === "EUR" ? "€" : "US$";
-    const digits = v !== 0 && Math.abs(v) < 10 ? 2 : 0;
+    const digits = cents || (v !== 0 && Math.abs(v) < 10) ? 2 : 0;
     return `${sym}${v.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
   };
   const totalText = (totals) =>
@@ -118,7 +121,7 @@
       const a = document.createElement("td");
       a.textContent = label;
       const b = document.createElement("td");
-      b.textContent = money(v, cur);
+      b.textContent = money(v, cur, true);
       tr.append(a, b);
       tbody.append(tr);
     }
@@ -153,6 +156,13 @@
       k.className = `key${s.cf ? " cf" : ""}`;
       li.append(k, document.createTextNode(s.label));
       legend.append(li);
+      if (s.beyond !== undefined && s.beyond < X1) {
+        const li2 = document.createElement("li");
+        const k2 = document.createElement("span");
+        k2.className = "key beyond";
+        li2.append(k2, document.createTextNode(`beyond the ${SOAK_WRITES_PER_S.toFixed(0)} writes a second our soaks carried: not measured`));
+        legend.append(li2);
+      }
     }
     box.append(legend);
 
@@ -162,7 +172,7 @@
     const L = 64;
     const R = 16;
     const T = 12;
-    const B = 34;
+    const B = 46;
     // Both axes are logarithmic: bills span four orders of magnitude.
     const ys = series.flatMap((s) => s.ys).filter((y) => y > 0);
     const lo = Math.floor(Math.log10(Math.max(1, Math.min(...ys))));
@@ -175,17 +185,29 @@
       const y = Math.pow(10, e);
       el("line", { class: "ch-grid", x1: L, x2: W - R, y1: sy(y), y2: sy(y) }, svg);
       const t = el("text", { class: "ch-axis", x: L - 8, y: sy(y) + 4, "text-anchor": "end" }, svg);
-      t.textContent = `${cur === "EUR" ? "€" : "US$"}${y.toLocaleString("en-US")}`;
+      const n = y >= 1e6 ? `${y / 1e6}M` : y >= 1e3 ? `${y / 1e3}k` : String(y);
+      t.textContent = `${cur === "EUR" ? "€" : "US$"}${n}`;
     }
     for (const x of W < 480 ? [1e6, 1e8, 1e10] : [1e6, 1e7, 1e8, 1e9, 1e10]) {
-      const t = el("text", { class: "ch-axis", x: sx(x), y: H - 12, "text-anchor": "middle" }, svg);
+      const t = el("text", { class: "ch-axis", x: sx(x), y: H - 28, "text-anchor": "middle" }, svg);
       t.textContent = tick(x);
     }
-    const xl = el("text", { class: "ch-axis", x: L, y: H - 2, "text-anchor": "start" }, svg);
+    const xl = el("text", { class: "ch-axis", x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle" }, svg);
     xl.textContent = "requests per month (log scale)";
+    const pathOf = (ys, from, to) =>
+      ys
+        .slice(from, to + 1)
+        .map((y, j) => `${j ? "L" : "M"}${sx(sweepXs[from + j]).toFixed(1)} ${sy(Math.min(y, yMax)).toFixed(1)}`)
+        .join("");
     for (const s of series) {
-      const d = s.ys.map((y, i) => `${i ? "L" : "M"}${sx(sweepXs[i]).toFixed(1)} ${sy(Math.min(y, yMax)).toFixed(1)}`).join("");
-      el("path", { class: `ch-line ${s.cf ? "ch-cf" : "ch-self"}`, d }, svg);
+      // A self-hosted line turns grey and dotted past the soaked write rate.
+      let cut = STEPS;
+      if (s.beyond !== undefined) {
+        const k = sweepXs.findIndex((x) => x > s.beyond);
+        if (k >= 0) cut = Math.max(0, k);
+      }
+      el("path", { class: `ch-line ${s.cf ? "ch-cf" : "ch-self"}`, d: pathOf(s.ys, 0, cut) }, svg);
+      if (cut < STEPS) el("path", { class: "ch-line ch-beyond", d: pathOf(s.ys, cut, STEPS) }, svg);
     }
     if (w.req >= X0 && w.req <= X1) {
       el("line", { class: "ch-now", x1: sx(w.req), x2: sx(w.req), y1: T, y2: H - B }, svg);
@@ -201,11 +223,19 @@
     // Hover and focus: a crosshair that snaps to the nearest step.
     const hair = el("line", { class: "ch-hair", y1: T, y2: H - B, visibility: "hidden" }, svg);
     const dots = series.map((s) => el("circle", { class: s.cf ? "ch-dot-cf" : "ch-dot-self", r: 4, visibility: "hidden" }, svg));
-    const hit = el("rect", { x: L, y: T, width: W - L - R, height: H - T - B, fill: "transparent", tabindex: 0, "aria-label": "Move along the chart with the arrow keys" }, svg);
+    const hit = el("rect", { x: L, y: T, width: W - L - R, height: H - T - B, fill: "transparent" }, svg);
+    // The keyboard target is the figure around the picture, not a shape in it.
+    const fig = document.createElement("div");
+    fig.className = "chart-focus";
+    fig.tabIndex = 0;
+    fig.setAttribute("role", "group");
+    fig.setAttribute("aria-label", `${title}: use the left and right arrow keys to read the bills at each number of requests`);
+    fig.append(svg);
     const tip = document.createElement("div");
     tip.className = "tip";
     tip.hidden = true;
-    box.append(svg, tip);
+    tip.setAttribute("aria-live", "polite");
+    box.append(fig, tip);
     let at = Math.round((STEPS * Math.log10(w.req / X0)) / 4) || 0;
     const showAt = (i) => {
       at = Math.max(0, Math.min(STEPS, i));
@@ -246,9 +276,9 @@
       showAt(Math.round(f * STEPS));
     });
     hit.addEventListener("pointerleave", hide);
-    hit.addEventListener("focus", () => showAt(at));
-    hit.addEventListener("blur", hide);
-    hit.addEventListener("keydown", (e) => {
+    fig.addEventListener("focus", () => showAt(at));
+    fig.addEventListener("blur", hide);
+    fig.addEventListener("keydown", (e) => {
       const d = { ArrowRight: 1, ArrowLeft: -1, ArrowUp: 5, ArrowDown: -5 }[e.key];
       if (d === undefined) return;
       e.preventDefault();
@@ -306,22 +336,43 @@
     } else {
       verdict.textContent = `Cloudflare: ${totalText(cf.totals)}. Self-hosted: ${totalText(self.totals)}. Part of that is in euros, and we do not convert currencies, so no crossing is drawn: compare the two at your own exchange rate.`;
     }
+    if (w.awake > 0) {
+      const dur = cf.lines.find((l) => l[0] === "Duration")[1];
+      verdict.textContent += ` The ${w.awake.toLocaleString("en-US")} actors that never hibernate are ${money(dur, "USD", true)} of Cloudflare's duration bill: actors that use its WebSocket Hibernation API are not billed while idle, so check whether yours can.`;
+    }
 
     const perS = self.writes / MONTH_S;
-    $("capacity").textContent =
+    const soaked = SOAK_WRITES_PER_S.toFixed(0);
+    const disk = VPS[vps].disk;
+    const notes = [
       perS > SOAK_WRITES_PER_S
-        ? `Your writes come to about ${perS.toFixed(0)} a second, above the ${SOAK_WRITES_PER_S.toFixed(0)} a second our 12-hour soak carried on three VPS. Whether three small VPS keep up is not measured.`
-        : `Three small VPS carrying this is assumed, not measured; your writes come to about ${perS.toFixed(1)} a second (our 12-hour soak carried ${SOAK_WRITES_PER_S.toFixed(0)}). Bucket requests: ${big(Math.round(self.requests.put))} PUT, ${big(Math.round(self.requests.list))} LIST, ${big(Math.round(self.requests.get))} GET a month.`;
+        ? `Your writes come to about ${perS.toFixed(0)} a second, above the ${soaked} a second the busiest of our soaks carried on three VPS: whether three small VPS keep up is not measured.`
+        : `Three small VPS carrying this is assumed, not measured; your writes come to about ${perS.toFixed(1)} a second (the busiest of our soaks carried ${soaked}).`,
+    ];
+    if (w.gb > disk) {
+      notes.push(
+        `Disk: each actor's database lives on the disk of the node that runs it, and these VPS have ${disk} GB each. ${
+          w.gb > 3 * disk * 0.8 ? `${w.gb} GB does not fit on three of them` : `${w.gb} GB fits only if it spreads evenly, with room left when a node dies`
+        }; bigger disks or servers are not in this bill.`,
+      );
+    }
+    notes.push(`Bucket requests: ${big(Math.round(self.requests.put))} PUT, ${big(Math.round(self.requests.list))} LIST, ${big(Math.round(self.requests.get))} GET a month.`);
+    $("capacity").textContent = notes.join(" ");
+    if (perS > SOAK_WRITES_PER_S || w.gb > disk) {
+      verdict.textContent += " The servers in this bill may not carry it: read the capacity and disk notes below the bills.";
+    }
 
+    // Requests a month at which writes pass the soaked rate.
+    const rStar = w.wshare > 0 ? (SOAK_WRITES_PER_S * MONTH_S) / (w.wshare / 100) : Infinity;
     const charts = $("charts");
     charts.replaceChildren();
     const usdSeries = [{ label: "Cloudflare", cf: true, ys: cfYs }];
     if (curs.includes("USD") && selfUsd.some((y) => y > 0)) {
-      usdSeries.push({ label: allUsd ? "WasmKeep, self-hosted" : "WasmKeep, its US$ part", ys: selfUsd });
+      usdSeries.push({ label: allUsd ? "WasmKeep, self-hosted" : "WasmKeep, its US$ part", ys: selfUsd, beyond: rStar });
     }
     charts.append(panel("Monthly bill in US$", "USD", usdSeries, w, cross));
     if (!allUsd) {
-      charts.append(panel("Monthly bill in euros", "EUR", [{ label: selfUsd.some((y) => y > 0) ? "WasmKeep, its euro part" : "WasmKeep, self-hosted", ys: selfEur }], w, null));
+      charts.append(panel("Monthly bill in euros", "EUR", [{ label: selfUsd.some((y) => y > 0) ? "WasmKeep, its euro part" : "WasmKeep, self-hosted", ys: selfEur, beyond: rStar }], w, null));
     }
 
     const table = $("sweep-table");
