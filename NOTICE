@@ -1,0 +1,8 @@
+WasmKeep website
+Copyright 2026 Julien Turbide
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The example components it runs (downloaded by scripts/fetch-components.sh,
+not part of this repository) come from the WasmKeep releases, with their
+own notices in THIRD_PARTY_NOTICES-components.txt.

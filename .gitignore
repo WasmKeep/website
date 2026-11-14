@@ -1,0 +1,9 @@
+# Build output
+/public/
+/front/target/
+# Downloaded by scripts/fetch-components.sh, never committed
+/components/
+/.cache/
+# `wasmkeep dev` state and local values
+/.wasmkeep/
+/.env.local
