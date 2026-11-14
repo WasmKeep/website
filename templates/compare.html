@@ -3,14 +3,38 @@
 {% block description %}{{ page.description }}{% endblock description %}
 {% block content %}
 {%- set docs = config.extra.docs -%}
+{%- set blob = config.extra.blob -%}
 <header class="wrap page-head">
   <h1>WasmKeep and the alternatives</h1>
-  <p class="lead">Several good tools give each piece of state its own small home. They differ on what you write it in, where the state lives, when a write counts as done, and who runs it. Here is each one as its own pages describe it, and when to pick it instead.</p>
+  <p class="lead">Several good tools give each piece of state its own small home. WasmKeep's case is a combination: your servers and your bucket, any language as standard components, and a write that counts only once it is in that bucket. Here is when to pick it, how the others describe themselves, and when to pick them instead.</p>
   <p class="small">Read on each project's own site or repository on 2026-11-14; sources at the end. A cell says "not stated" where the pages we read do not say. Corrections are welcome as <a href="{{ config.extra.source }}/issues">an issue</a>.</p>
 </header>
 
+<section class="wrap section" aria-labelledby="pick-us-title">
+  <h2 id="pick-us-title">Pick WasmKeep when</h2>
+  <ul class="why why-4">
+    <li>
+      <h3>{{<icon name="server" />}}You want it on your servers, with your bucket</h3>
+      <p>One binary per node; the nodes share any S3-compatible bucket, which holds the leases and every actor's history. Soaked with nodes killed under load against Cloudflare R2 and OVHcloud Object Storage (<a href="{{ docs }}/benchmarks.html#three-nodes-against-a-real-bucket">benchmarks</a>).</p>
+    </li>
+    <li>
+      <h3>{{<icon name="languages" />}}Your code is not JavaScript</h3>
+      <p>Actors are standard WASI 0.2 components run by Wasmtime, with no JavaScript in between. On one workstation the Rust, Zig and C counters used 104, 107 and 110 µs of server CPU per request (<a href="{{ docs }}/benchmarks.html#the-same-counter-in-every-language">every language</a>).</p>
+    </li>
+    <li>
+      <h3>{{<icon name="cloud" />}}A write must survive its node</h3>
+      <p><code>exec-durable</code> answers only once the bucket holds the write, on one node or many. 12 hours, 239 kills on three VPS: 2,306,192 acknowledged writes, none lost or applied twice (<a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">CSV</a>).</p>
+    </li>
+    <li>
+      <h3>{{<icon name="check" />}}You want to read the evidence</h3>
+      <p>Apache-2.0, pull requests welcome under a CLA, and every published number backed by a CSV in <a href="{{ config.extra.tree }}/bench/results">bench/results</a>, including runs that failed a check.</p>
+    </li>
+  </ul>
+  <p class="small">Accept, today, that it is pre-alpha, runs in one region per cluster, and takes seconds to fail over: 17.6 s at the median and 27.1 s at worst in the 0.4.1 release candidate's 2-hour soak, 33.7 s at worst in the 12-hour soak.</p>
+</section>
+
 <section class="wrap cmp-wrap" aria-labelledby="cmp-title">
-  <h2 id="cmp-title" class="small">Side by side</h2>
+  <h2 id="cmp-title">Side by side</h2>
   <div class="cmp-table-wrap" tabindex="0" role="region" aria-labelledby="cmp-title">
     <table class="cmp">
       <thead>
@@ -117,14 +141,15 @@
     <div class="rail-head">
       <h2 id="picks-title">Pick them instead when</h2>
       <p>WasmKeep is young. Each of these is the better choice for someone; this is when it is likely to be you.</p>
+      <p class="small">More on <a href="#durable-objects">Durable Objects</a> and <a href="#celld">celld</a> below, with measurements.</p>
     </div>
     <ul class="picks">
       <li>
-        <h3>Cloudflare Durable Objects</h3>
+        <h3><a href="#durable-objects">Cloudflare Durable Objects</a></h3>
         <p>You want a managed global network, years of production at Cloudflare's scale, a mature JavaScript ecosystem and no servers to run. At small and medium scale it is likely as cheap or cheaper too: see <a href="/cost/">Cost</a>.</p>
       </li>
       <li>
-        <h3>celld</h3>
+        <h3><a href="#celld">celld</a></h3>
         <p>You already have Workers code and want it on your own machines as it is, with the Workers platform pieces (KV, Queues, D1, R2) beside it. WasmKeep has its own API and no Workers compatibility.</p>
       </li>
       <li>
@@ -155,18 +180,77 @@
   </div>
 </section>
 
-<section class="wrap rail" aria-labelledby="fit-title">
-  <div class="rail-head">
-    <h2 id="fit-title">Where WasmKeep fits</h2>
+<section class="wrap section" id="durable-objects" aria-labelledby="do-title">
+  <h2 id="do-title">In detail: Cloudflare Durable Objects</h2>
+  <p>The closest programming model: one addressable object per name, one event at a time, its own storage, alarms and WebSockets. Two things carry the name: <strong>workerd</strong>, the open-source runtime, and <strong>Cloudflare Workers</strong>, the hosted platform. The numbers below compare runtimes; much of what makes Workers strong is the platform.</p>
+  <h3>The same counter in both runtimes</h3>
+  <p class="small">From <a href="{{ docs }}/benchmarks.html#wasmkeep-against-workerd-the-same-counter">WasmKeep against workerd, the same counter</a>: an AMD Ryzen 9 7950X workstation, both runtimes' data on tmpfs, eight clients over loopback, workerd 1.20261016.1 (<a href="{{ blob }}/bench/results/2026-11-06-351ea57.csv">2026-11-06-351ea57.csv</a>).</p>
+  <div class="table-scroll">
+    <table class="price-table num-table">
+      <thead><tr><th scope="col">Counter</th><th scope="col">WasmKeep, Rust</th><th scope="col">WasmKeep, TypeScript</th><th scope="col">workerd</th></tr></thead>
+      <tbody>
+        <tr><td>Read, resident actor (p50 / p99)</td><td>61 / 87 µs</td><td>139 / 269 µs</td><td>156 / 212 µs</td></tr>
+        <tr><td>Write, resident actor (p50 / p99)</td><td>67 / 92 µs</td><td>146 / 262 µs</td><td>177 / 225 µs</td></tr>
+        <tr><td>First request to a new actor (p50)</td><td>0.49 ms</td><td>0.77 ms</td><td>0.41 ms</td></tr>
+        <tr><td>Memory per resident actor</td><td>250 KB</td><td>741 KB</td><td>277 KB</td></tr>
+        <tr><td>Server CPU time per request (8 clients)</td><td>104 µs</td><td>230 µs</td><td>128 µs</td></tr>
+      </tbody>
+    </table>
   </div>
-  <div class="prose">
-    <p>Pick WasmKeep when you want the one-object-per-thing model on servers you own, in a compiled language or several, with each actor's data as SQLite files and a documented replication format in your own bucket, and with every durable write in that bucket before it is acknowledged. Accept, today, that it is pre-alpha, runs in one region per cluster, and takes seconds to fail over.</p>
-    <p>The documentation compares it in more depth, with measurements, with <a href="{{ docs }}/compared-with-workers.html">Cloudflare Workers</a> and with <a href="{{ docs }}/compared-with-celld.html">celld</a>.</p>
+  <ul class="small">
+    <li>The machine changes the answer: on a shared 4-vCPU VM, WasmKeep with Rust used 215 µs of CPU per request against workerd's 555 µs (<a href="{{ blob }}/bench/results/2026-11-05-ae5416c.csv">2026-11-05-ae5416c.csv</a>).</li>
+    <li>workerd's throughput is left out: it runs one thread per process by design, so one process is not a fair comparison.</li>
+    <li>TypeScript on WasmKeep runs on QuickJS, an interpreter in each actor: about 1.8 times workerd's CPU. JavaScript-heavy code belongs on workerd.</li>
+  </ul>
+  <p>Pick Durable Objects for a managed global network, a mature JavaScript ecosystem and no servers to run; pick WasmKeep for durable actors on your servers, in a compiled language, with the data in your bucket. <a href="{{ docs }}/compared-with-workers.html">WasmKeep and Cloudflare Workers</a> has the full comparison.</p>
+</section>
+
+<section class="band" id="celld" aria-labelledby="celld-title">
+  <div class="wrap section">
+  <h2 id="celld-title">In detail: celld</h2>
+  <p>The same idea, built on the Workers API: Durable Object-style actors on your own servers, each with its own SQLite database, replicated to a bucket. Both ran the same counter on the same machine and the same local bucket. celld v0.6.3, five runs of each, medians with the lowest and highest in brackets.</p>
+  <h3>One node, every write in the bucket, data on disk</h3>
+  <p class="small">From <a href="{{ docs }}/benchmarks.html#wasmkeep-against-celld-every-write-in-a-bucket">WasmKeep against celld, every write in a bucket</a>: the workstation above, MinIO on loopback with its data on tmpfs, each runtime's data on btrfs on an encrypted NVMe SSD (<a href="{{ blob }}/bench/results/2026-11-11-488369d-bucket-minio-tmpfs-data-disk-r1.csv">…-data-disk-r1.csv</a> to r5).</p>
+  <div class="table-scroll">
+    <table class="price-table num-table">
+      <thead><tr><th scope="col">Counter on a bucket</th><th scope="col">WasmKeep, durable</th><th scope="col">celld</th></tr></thead>
+      <tbody>
+        <tr><td>Write, resident actor, p50</td><td>2.31 ms (2.23–2.32)</td><td>2.55 ms (2.49–2.57)</td></tr>
+        <tr><td>Write, p99</td><td>6.02 ms (5.95–6.14)</td><td>3.64 ms (3.20–4.26)</td></tr>
+        <tr><td>Read, resident actor, p50</td><td>63 µs (62–66)</td><td>116 µs (113–130)</td></tr>
+        <tr><td>Server memory, 1000 resident actors</td><td>334 MB (333–334)</td><td>388 MB (387–390)</td></tr>
+        <tr><td>Server CPU time per request (8 clients)</td><td>683 µs (661–691)</td><td>800 µs (775–835)</td></tr>
+        <tr><td>Throughput, 8 clients, 1000 actors</td><td>1,980 req/s (1,974–2,032)</td><td>2,087 req/s (2,003–2,198)</td></tr>
+        <tr><td>Process start to first response</td><td>15.09 s (a cluster node's first start waits 15 s by design)</td><td>94 ms (94–97)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Three nodes, a node killed under writes, data on disk</h3>
+  <p class="small">From <a href="{{ docs }}/benchmarks.html#three-nodes-wasmkeep-against-celld">Three nodes: WasmKeep against celld</a>: three processes of each on the same workstation, the same local MinIO, plain HTTP between nodes (celld has no TLS between peers), default lease timings, each node killed in turn while 90 ledger actors were written (<a href="{{ blob }}/bench/results/2026-11-11-c556110-cluster-minio-tmpfs-nodes-disk-r1.csv">…-nodes-disk-r1.csv</a> to r5). celld "fleet", its default with two or more nodes, answers once a follower has the write on disk; "bucket" waits for the bucket, as WasmKeep does.</p>
+  <div class="table-scroll">
+    <table class="price-table num-table">
+      <thead><tr><th scope="col">Three nodes</th><th scope="col">WasmKeep, durable</th><th scope="col">celld, fleet</th><th scope="col">celld, bucket</th></tr></thead>
+      <tbody>
+        <tr><td>Acknowledged writes lost</td><td>0 in every run</td><td>0 in every run</td><td>0 in every run</td></tr>
+        <tr><td>Write, through a random node, p50</td><td>2.30 ms (2.29–2.31)</td><td>5.24 ms (5.22–5.30)</td><td>2.68 ms (2.63–2.72)</td></tr>
+        <tr><td>Write, p99</td><td>5.89 ms (5.85–6.20)</td><td>13.5 ms (12.2–22.9)</td><td>4.17 ms (3.31–4.49)</td></tr>
+        <tr><td>Read, through a random node, p50</td><td>92 µs (91–93)</td><td>218 µs (215–224)</td><td>220 µs (211–221)</td></tr>
+        <tr><td>Memory, three nodes, 1000 resident actors</td><td>459 MB (455–461)</td><td>519 MB (514–544)</td><td>520 MB (518–524)</td></tr>
+        <tr><td>Throughput, 8 clients, 1000 actors</td><td>1,710 req/s (1,700–1,733)</td><td>373 req/s (353–381)</td><td>1,857 req/s (1,822–1,888)</td></tr>
+        <tr><td>Writable again after its node died, p50</td><td>15.0 s (14.7–15.3)</td><td>9.1 s (7.6–9.6)</td><td>9.4 s (9.3–9.5)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="small">
+    <li>Not measured here: nodes on separate machines with a disk each, a cloud bucket, and mutual TLS between WasmKeep nodes. Which answers a durable write sooner on a cloud bucket is open.</li>
+    <li>celld's fleet mode was its slowest on a shared disk in every run, which the benchmarks do not explain.</li>
+  </ul>
+  <p>Pick celld for Workers code you already have, and for faster takeover and start with its defaults; pick WasmKeep for compiled languages, less memory per actor, faster reads and encrypted traffic between nodes. <a href="{{ docs }}/compared-with-celld.html">WasmKeep and celld</a> has the full comparison.</p>
   </div>
 </section>
 
-<section class="band band-end" aria-labelledby="src-title">
-  <div class="wrap section">
+<section class="wrap section" aria-labelledby="src-title">
+  <div>
     <h2 id="src-title">Sources</h2>
     <p class="small">Each project's own pages, read on 2026-11-14.</p>
     <ul class="sources">
