@@ -1833,3 +1833,38 @@ code {
 .why + p {
   margin-top: 1.25rem;
 }
+
+// Your bucket: tiers, from soaked to not supported.
+
+.buckets {
+  margin: 0;
+  display: grid;
+  border-top: 2px solid var(--ink);
+  div {
+    display: grid;
+    gap: 0.2rem 1.5rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--rule);
+    @media (min-width: 48rem) {
+      grid-template-columns: 19rem 1fr;
+    }
+  }
+  dt {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    font-weight: 650;
+    font-size: 0.95rem;
+    .icon {
+      color: var(--ok);
+      margin-top: 0.15rem;
+    }
+  }
+  dd {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  .bucket-no dt .icon {
+    color: var(--down);
+  }
+}

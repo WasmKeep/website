@@ -26,6 +26,11 @@
       <a href="{{ docs }}/failover-and-scaling.html">When a node dies</a>
     </li>
     <li>
+      <h2>{{<icon name="bucket" />}}Your S3-compatible bucket</h2>
+      <p>Soaked on Cloudflare R2 and OVHcloud Object Storage. Any other S3-compatible store: check it with <code>wasmkeep cluster diagnose</code>. Google Cloud Storage and Azure Blob Storage are not supported yet.</p>
+      <a href="{{ docs }}/deploy/buckets.html">Buckets</a>
+    </li>
+    <li>
       <h2>{{<icon name="moon" />}}Hibernation</h2>
       <p>Idle actors leave memory and wake in about a millisecond, with their data, their pending alarm and their open WebSockets.</p>
       <a href="{{ docs }}/concepts.html">Life cycle</a>

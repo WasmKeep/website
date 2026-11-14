@@ -147,6 +147,36 @@
   </div>
 </section>
 
+<section class="wrap rail" aria-labelledby="bucket-title">
+  <div class="rail-head">
+    <h2 id="bucket-title">Your bucket</h2>
+    <p>Everything a cluster shares lives in one bucket, through the S3 API. Every node checks at start that the bucket refuses a stale conditional write, and stays not ready if it does not.</p>
+    <p class="small"><a href="{{ config.extra.docs }}/deploy/buckets.html">Buckets</a> lists what WasmKeep needs from one, and how to check yours.</p>
+  </div>
+  <dl class="buckets">
+    <div>
+      <dt>{{<icon name="check" />}}Soaked with nodes killed</dt>
+      <dd>Cloudflare R2, OVHcloud Object Storage</dd>
+    </div>
+    <div>
+      <dt>{{<icon name="code" />}}Used in tests and benchmarks</dt>
+      <dd>MinIO and moto, run locally</dd>
+    </div>
+    <div>
+      <dt>{{<icon name="book" />}}Documents both conditional writes; not tested by us yet</dt>
+      <dd>AWS S3 (<a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html">its conditional writes</a>)</dd>
+    </div>
+    <div>
+      <dt>{{<icon name="terminal" />}}Anything else S3-compatible</dt>
+      <dd>Run <code>wasmkeep cluster diagnose</code> against it first; a node refuses a bucket that ignores conditional writes.</dd>
+    </div>
+    <div class="bucket-no">
+      <dt>{{<icon name="x" />}}Not supported yet</dt>
+      <dd>Google Cloud Storage and Azure Blob Storage: no S3 conditional-write API to rely on, and no native backend yet.</dd>
+    </div>
+  </dl>
+</section>
+
 <section class="wrap rail" aria-labelledby="uses-title">
   <div class="rail-head">
     <h2 id="uses-title">What people build with actors</h2>
