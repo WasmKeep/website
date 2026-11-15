@@ -1,0 +1,12 @@
+{% component comparison_status(value: string) %}
+<span class="cmp-status cmp-status-{{ value }}">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    {% if value == "built" %}<path d="m5 12 4 4L19 6"/>
+    {% elif value == "partial" %}<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/>
+    {% elif value == "planned" %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+    {% elif value == "no" %}<path d="m6 6 12 12M18 6 6 18"/>
+    {% else %}<circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01"/>{% endif %}
+  </svg>
+  <span>{{ value | capitalize }}</span>
+</span>
+{% endcomponent comparison_status %}

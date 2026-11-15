@@ -30,6 +30,14 @@ const LANGUAGES: &[(&str, &str)] = &[
 /// The one actor of each class the wall uses.
 const ACTOR: &str = "wall";
 
+/// The host marks real upgrades; WASI HTTP strips the Upgrade header.
+pub fn live(request: &IncomingRequest) -> Response {
+    if !front::is_websocket(request) {
+        return json_error(426, "websocket upgrade required");
+    }
+    front::hand_off("wall-room", "main", "/live")
+}
+
 /// A language's place on the wall.
 enum Count {
     /// Its counter answered.
@@ -158,6 +166,19 @@ pub fn add(request: &IncomingRequest, lang: &str) -> Response {
     let Some(count) = count else {
         return json_error(502, "the counter gave no count");
     };
+    // Best effort: the counter's write already succeeded. The SDK call
+    // waits for a reply, but a notify error must never fail that write.
+    let notify = actors::Request {
+        method: "POST".into(),
+        path: "/notify".into(),
+        headers: Vec::new(),
+        body: format!("{class} {count}").into_bytes(),
+    };
+    match actors::call("wall-room/main", &notify) {
+        Ok(r) if r.status == 204 => {}
+        Ok(r) => eprintln!("wall-room/main notify: status {}", r.status),
+        Err(e) => eprintln!("wall-room/main notify: {e:?}"),
+    }
     let accept = header(request, "accept").unwrap_or_default();
     if accept.contains("text/html") && !accept.contains("application/json") {
         return Response {

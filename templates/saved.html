@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} - {{ config.title }}{% endblock title %}
+{% block description %}{{ page.description }}{% endblock description %}
+{% block content %}
+<header class="wrap page-head">
+  <p class="saved-eyebrow">A reply. A local commit. A durable write.</p>
+  <h1>What saved means</h1>
+  <p class="lead">A reply can arrive before a write reaches the bucket. Choose when the node crashes to see what another node can restore.</p>
+  <p class="small">An illustrative model of one actor in a cluster, starting at counter 0. Three events add one each: A → 1, B → 2, C → 3. Steps show order, not elapsed time or measured performance.</p>
+</header>
+
+<section class="wrap section" aria-labelledby="saved-title" data-saved>
+  <h2 id="saved-title">Where would you cut the power?</h2>
+  <div class="saved-controls" hidden>
+    <label for="saved-mode">Write mode</label>
+    <select id="saved-mode">
+      <option value="plain">exec · 0.4.2</option>
+      <option value="durable">exec-durable · 0.4.2</option>
+    </select>
+    <p id="saved-mode-note" class="small"></p>
+    <div class="saved-scrubber">
+      <label for="saved-moment">Crash moment <span id="saved-position"></span></label>
+      <input id="saved-moment" type="range" min="0" max="9" value="2" step="1" aria-describedby="saved-slider-help">
+      <p class="small" id="saved-slider-help">Drag, use the arrow keys, or choose a step below. Home and End jump to either end.</p>
+      <div class="saved-step-controls">
+        <button type="button" class="button" id="saved-prev">Previous step</button>
+        <button type="button" class="button" id="saved-next">Next step</button>
+      </div>
+    </div>
+    <div class="saved-crash" aria-live="polite" aria-atomic="true">
+      <h3>If the node crashes here</h3>
+      <p id="saved-current"></p>
+      <p id="saved-outcome"></p>
+      <p id="saved-reuse" class="small"></p>
+    </div>
+    <ol class="saved-timeline" aria-label="Choose a crash moment"></ol>
+    <ul class="saved-writes" aria-label="Write outcomes"></ul>
+    <p class="small">“Lost” means absent from the restored history in this example. “Not run” means the crash came before that write. A reply is what this example's caller has received.</p>
+  </div>
+  <noscript><p>The interactive timeline needs JavaScript. The write contracts are described below.</p></noscript>
+</section>
+
+<section class="band" aria-labelledby="saved-contract-title">
+  <div class="wrap rail">
+    <div class="rail-head">
+      <h2 id="saved-contract-title">What each promise covers</h2>
+      <p>The released modes below describe <strong>WasmKeep 0.4.2</strong>. The planned batching note describes a proposal, not a setting in that release or this timeline.</p>
+    </div>
+    <div class="prose">
+      <h3>Plain <code>exec</code></h3>
+      <p>Commits locally and returns. The handler can reply before the upload, which follows the event. In 0.4.2, the actor waits for that upload before running its next event. A crash before upload can lose the write, even after a reply; a later increment can return the same counter value again.</p>
+      <h3><code>exec-durable</code></h3>
+      <p>Returns successfully only after the bucket holds the write and every earlier write of that actor, with the upload completed while the node still holds the actor. This example's handler waits for that success before replying. A received durable acknowledgement survives loss of the node.</p>
+      <h3>Batched plain writes <span class="saved-badge">planned for 0.5.0, opt-in</span></h3>
+      <p>ADR 0034 proposes letting later events see local writes while uploads are pending. A crash can lose the whole unreplicated window, including several writes already answered. Strict behavior stays the default; durable operations still wait for the bucket. Batch size and loss limits are not specified by this note.</p>
+      <h3>No reply does not mean no write</h3>
+      <p>Crash after upload but before the reply: the write survives, but the caller does not know that. Make retries safe to repeat. An upload still in flight at a crash can also have an uncertain outcome.</p>
+      <p class="small">This model selects a clean boundary: an upload is either not started or completed under a valid hold. It omits upload races, errors and the wait for takeover. Restore is from the bucket, not the failed node's disk. On a single node without a bucket, <code>exec-durable</code> instead waits for a local fsync.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap rail" aria-labelledby="saved-sources-title">
+  <div class="rail-head">
+    <h2 id="saved-sources-title">Read the contract</h2>
+    <p>Storage calls, replication and the proposed change.</p>
+  </div>
+  <ul>
+    <li><a href="{{ config.extra.docs }}/concepts.html#storage">Concepts: storage</a></li>
+    <li><a href="{{ config.extra.docs }}/cluster.html#replication">Running a cluster: replication</a></li>
+    <li><a href="{{ config.extra.docs }}/failover-and-scaling.html#what-callers-get-meanwhile">When a node dies: what callers get</a></li>
+    <li><a href="{{ config.extra.blob }}/docs/adr/0007-replication-protocol.md">ADR 0007: replication and the acknowledgement rule</a></li>
+    <li><a href="{{ config.extra.github }}/blob/main/docs/adr/0034-batched-plain-writes.md">ADR 0034: batched plain writes (planned, opt-in)</a></li>
+  </ul>
+</section>
+{% endblock content %}
+{% block scripts %}
+<script src="{{ get_url(path='saved.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
+{% endblock scripts %}

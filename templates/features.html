@@ -5,13 +5,13 @@
 {%- set docs = config.extra.docs -%}
 <header class="wrap page-head">
   <h1>What works today</h1>
-  <p class="lead">Each part below has tests that run before every merge. WasmKeep is pre-alpha: it is measured, and it does not yet carry real users' traffic.</p>
+  <p class="lead">The capabilities below are available in WasmKeep {{ config.extra.release }}. It is pre-alpha, tested and measured, but not yet carrying real users’ traffic.</p>
 </header>
 
 <section class="wrap section" aria-label="Features">
   <ul class="features">
     <li class="feat-wide">
-      <h2>{{<icon name="database" />}}An SQLite database per actor</h2>
+      <h2>{{<icon name="database" />}}A SQLite database per actor</h2>
       <p>Each actor owns its state in its own database, queried with plain SQL, and handles one event at a time, in arrival order: two requests to the same actor never interleave.</p>
       <a href="{{ docs }}/concepts.html">Concepts</a>
     </li>
@@ -32,7 +32,7 @@
     </li>
     <li>
       <h2>{{<icon name="moon" />}}Hibernation</h2>
-      <p>Idle actors leave memory and wake in about a millisecond, with their data, their pending alarm and their open WebSockets.</p>
+      <p>Idle actors leave memory. Their next event wakes them with their data, pending alarm and open WebSockets.</p>
       <a href="{{ docs }}/concepts.html">Life cycle</a>
     </li>
     <li>
@@ -67,8 +67,8 @@
     </li>
   </ul>
   <div class="callout warn">
-    <h2>Not yet</h2>
-    <p>Weeks of real traffic, a run against AWS S3, an independent security audit, and a sandbox tier for tenants who do not trust each other. What is left is on the <a href="{{ config.extra.github }}/blob/main/ROADMAP.md">roadmap</a>.</p>
+    <h2>Limits and planned work</h2>
+    <p>Weeks of real traffic, a run against AWS S3, an independent security audit, and a sandbox tier for tenants who do not trust each other. Export and online backup are planned for 0.5.0; rebalancing at wake-up is planned for 0.6.0. Neither is available in 0.4.2. Follow the <a href="{{ config.extra.github }}/blob/main/ROADMAP.md">roadmap</a>.</p>
   </div>
 </section>
 {% endblock content %}

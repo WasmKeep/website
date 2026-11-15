@@ -5,148 +5,88 @@
 {%- set docs = config.extra.docs -%}
 {%- set blob = config.extra.blob -%}
 <header class="wrap page-head">
-  <h1>WasmKeep and the alternatives</h1>
-  <p class="lead">Several good tools give each piece of state its own small home. WasmKeep's case is a combination: your servers and your bucket, languages whose toolchains build WASI 0.2 components for WasmKeep's interfaces, and acknowledged durable writes (<code>exec-durable</code>) that survive their node. SDK features vary by language; plain writes may lose the latest events on a crash. Here is when to pick it, how the others describe themselves, and when to pick them instead.</p>
-  <p class="small">Read on each project's own site or repository on 2026-11-14; sources at the end. A cell says "not stated" where the pages we read do not say. Corrections are welcome as <a href="{{ config.extra.source }}/issues">an issue</a>.</p>
+  <p class="eyebrow">Model · State · Runtime · Operations</p>
+  <h1>Compare feature by feature</h1>
+  <p class="lead">WasmKeep 0.4.2 and eight alternatives. Start with the state and execution model your application needs, then compare what you will have to operate.</p>
+  <nav class="page-toc" aria-label="On this page"><a href="#pick-us-title">Fit</a><a href="#cmp-title">Matrix</a><a href="#picks-title">Alternatives</a><a href="#durable-objects">Durable Objects</a><a href="#celld">celld</a><a href="#src-title">Sources</a></nav>
 </header>
 
 <section class="wrap section" aria-labelledby="pick-us-title">
   <h2 id="pick-us-title">Pick WasmKeep when</h2>
   <ul class="why why-4">
-    <li>
-      <h3>{{<icon name="server" />}}You want it on your servers, with your bucket</h3>
-      <p>One binary per node; the nodes share any S3-compatible bucket, which holds the leases and every actor's history. Soaked with nodes killed under load against Cloudflare R2 and OVHcloud Object Storage (<a href="{{ docs }}/benchmarks.html#three-nodes-against-a-real-bucket">benchmarks</a>).</p>
-    </li>
-    <li>
-      <h3>{{<icon name="languages" />}}Your code is not JavaScript</h3>
-      <p>Actors are standard WASI 0.2 components run by Wasmtime, with no JavaScript in between. On one workstation the Rust, Zig and C counters used 104, 107 and 110 µs of server CPU per request (<a href="{{ docs }}/benchmarks.html#the-same-counter-in-every-language">every language</a>).</p>
-    </li>
-    <li>
-      <h3>{{<icon name="cloud" />}}A write must survive its node</h3>
-      <p><code>exec-durable</code> answers only once the bucket holds the write, on one node or many. 12 hours, 239 kills on three VPS: 2,306,192 acknowledged durable writes, none lost or applied twice (<a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">CSV</a>).</p>
-    </li>
-    <li>
-      <h3>{{<icon name="check" />}}You want to read the evidence</h3>
-      <p>Apache-2.0, pull requests welcome under a CLA, and every published number backed by a CSV in <a href="{{ config.extra.tree }}/bench/results">bench/results</a>, including runs that failed a check.</p>
-    </li>
+    <li><h3>{{<icon name="server" />}}You want to own the deployment</h3><p>One binary per node, on your servers, with replicated state in your S3-compatible bucket.</p></li>
+    <li><h3>{{<icon name="languages" />}}Your actors fit WASI 0.2</h3><p>Run compiled components with private SQLite state. Choose a language by its SDK support, not just whether it compiles.</p></li>
+    <li><h3>{{<icon name="cloud" />}}A reply must survive its node</h3><p>In a cluster, <code>exec-durable</code> waits for your bucket before acknowledging. Plain writes have a weaker contract. <a href="/saved/">What saved means</a>.</p></li>
+    <li><h3>{{<icon name="check" />}}You can evaluate a young runtime</h3><p>Apache-2.0, open contributions under a CLA, and published benchmark evidence. 0.4.2 is pre-alpha: start with side projects or staging.</p></li>
   </ul>
-  <p class="small">Accept, today, that it is pre-alpha, runs in one region per cluster, and takes seconds to fail over: 17.4 s at the median and 29.0 s at worst in the 0.4.2 release candidate's 2-hour soak, 33.7 s at worst in the 12-hour soak.</p>
 </section>
 
 <section class="wrap cmp-wrap" aria-labelledby="cmp-title">
-  <h2 id="cmp-title">Side by side</h2>
-  <div class="cmp-table-wrap" tabindex="0" role="region" aria-labelledby="cmp-title">
+  <h2 id="cmp-title">The comparison matrix</h2>
+  <p id="cmp-verification" class="small">First-party documentation reviewed on <time datetime="{{ page.extra.reviewed }}">{{ page.extra.reviewed }}</time>. Each cell links to its evidence. “Unknown” is limited to behavior the reviewed docs do not establish; it does not mean a feature is absent. This is not a ranking.</p>
+  <ul class="cmp-legend" aria-label="Feature status legend">
+    <li>{{<comparison_status value="built" />}} <span>Available in the reviewed version</span></li>
+    <li>{{<comparison_status value="partial" />}} <span>Available with the stated limits</span></li>
+    <li>{{<comparison_status value="planned" />}} <span>Roadmap only; not available yet</span></li>
+    <li>{{<comparison_status value="no" />}} <span>Confirmed absent</span></li>
+    <li>{{<comparison_status value="unknown" />}} <span>Not established by the reviewed docs</span></li>
+  </ul>
+  <p class="small">For descriptive rows (language, storage, licence), “built” means the documented current arrangement. Read the note; a check is not a quality score. Plans have no promised dates.</p>
+  <nav class="page-toc" aria-label="Matrix row groups">{% for group in page.extra.groups %}<a href="#cmp-{{ group.id }}">{{ group.name }}</a>{% endfor %}</nav>
+  <p class="table-hint small" id="cmp-scroll">Scroll inside the table to compare projects; the feature names stay in view. Keyboard: focus the table, then use the arrow keys. Project headings link to sources.</p>
+  <div class="cmp-table-wrap" tabindex="0" role="region" aria-labelledby="cmp-title" aria-describedby="cmp-scroll cmp-verification">
     <table class="cmp">
-      <thead>
-        <tr>
-          <th scope="col">Project</th>
-          <th scope="col">Model and languages</th>
-          <th scope="col">Where state lives</th>
-          <th scope="col">When a write is acknowledged</th>
-          <th scope="col">Run it yourself</th>
-          <th scope="col">Licence</th>
-          <th scope="col">Maturity</th>
-        </tr>
-      </thead>
+      <caption>Feature availability — WasmKeep {{ page.extra.release }}, reviewed {{ page.extra.reviewed }}; official competitor docs reviewed on the same date</caption>
+      <thead><tr>
+        <th scope="col" id="cmp-feature">Feature</th>
+        {% for project in page.extra.projects %}<th scope="col" id="cmp-project-{{ project.id }}"{% if project.id == "wasmkeep" %} class="cmp-us"{% endif %}><a href="#source-{{ project.id }}">{{ project.name }}</a><span class="cmp-version">{% if project.id == "wasmkeep" %}{{ page.extra.release }} · pre-alpha{% else %}Docs · {{ page.extra.reviewed }}{% endif %}</span></th>{% endfor %}
+      </tr></thead>
+      {% for group in page.extra.groups %}
       <tbody>
-        <tr class="us">
-          <th scope="row">WasmKeep</th>
-          <td data-label="Model and languages">Actors, one per name, one event at a time. WASI 0.2 components implementing WasmKeep's interfaces; SDK features vary by language. SDKs for Rust, TypeScript, Python, C, Zig, Go (TinyGo); standard Go, D, MoonBit experimental.</td>
-          <td data-label="Where state lives">One SQLite database per actor on its node's disk, replicated to your S3-compatible bucket.</td>
-          <td data-label="When a write is acknowledged"><code>exec-durable</code>: once the bucket holds it. Plain <code>exec</code>: once committed locally, uploaded right after the event; the latest events may be lost on a crash.</td>
-          <td data-label="Run it yourself">Yes, only: one binary per node, nodes share a bucket.</td>
-          <td data-label="Licence">Apache-2.0</td>
-          <td data-label="Maturity">Pre-alpha, {{ config.extra.release }} (pre-release).</td>
-        </tr>
+        <tr class="cmp-group"><th scope="rowgroup" colspan="10" id="cmp-{{ group.id }}"><span>{{ group.name }}</span></th></tr>
+        {% for row in group.rows %}
+        {% set row_id = "cmp-" ~ group.id ~ "-" ~ loop.index %}
         <tr>
-          <th scope="row">Cloudflare Durable Objects</th>
-          <td data-label="Model and languages">One object per id, on Workers. JavaScript, TypeScript and Python; other languages through a shim to a JavaScript class.</td>
-          <td data-label="Where state lives">A SQLite database embedded in each object, on Cloudflare's network; 10 GB per object on Workers Paid.</td>
-          <td data-label="When a write is acknowledged">Writes go to a buffer flushed to disk; an output gate holds outgoing messages until earlier writes are confirmed flushed.</td>
-          <td data-label="Run it yourself">The platform is Cloudflare's. workerd, its open-source runtime, serves Durable Objects locally, with a cluster mode marked experimental.</td>
-          <td data-label="Licence">Managed service; workerd is Apache-2.0.</td>
-          <td data-label="Maturity">Generally available since 2021; SQLite storage GA in April 2025.</td>
+          <th scope="row" id="{{ row_id }}">{{ row.name }}</th>
+          {% for project in page.extra.projects %}
+          <td aria-label="{{ project.name }}, {{ row.name }}: {% if row.cells[project.id] is defined %}{{ row.cells[project.id].status }}{% if row.cells[project.id].release is defined %}, planned {{ row.cells[project.id].release }}{% endif %}. {{ row.cells[project.id].note }}{% else %}unknown; not established by the reviewed docs.{% endif %}" headers="cmp-project-{{ project.id }} cmp-{{ group.id }} {{ row_id }}"{% if project.id == "wasmkeep" %} class="cmp-us"{% endif %}>
+            {% if row.cells[project.id] is defined %}
+              {% set cell = row.cells[project.id] %}
+              {{<comparison_status value={cell.status} />}}
+              {% if cell.release is defined %}<a class="cmp-plan" href="{{ config.extra.github }}/blob/main/ROADMAP.md#{{ cell.roadmap }}">{% if cell.status != "planned" %}Planned {% endif %}{{ cell.release }}</a>{% endif %}
+              <p class="cmp-note">{{ cell.note }}</p>
+              {% if project.id == "wasmkeep" %}
+                {% if "ROADMAP.md" in cell.source %}{% set source_base = config.extra.github ~ "/blob/main" %}{% else %}{% set source_base = blob %}{% endif %}
+                {% set source_url = source_base ~ "/" ~ cell.source %}
+              {% else %}
+                {% set source_url = cell.source %}
+              {% endif %}
+              <a class="cmp-source" href="{{ source_url }}" aria-label="{{ project.name }}: {{ row.name }} source">Source</a>
+            {% else %}
+              {{<comparison_status value="unknown" />}}
+              <span class="cmp-note">Not established by the reviewed docs.</span>
+            {% endif %}
+          </td>
+          {% endfor %}
         </tr>
-        <tr>
-          <th scope="row">celld</th>
-          <td data-label="Model and languages">Wrangler bundles on V8 (Workers, Durable Objects, KV, Queues, D1, R2, Workflows) from your <code>wrangler.json</code>.</td>
-          <td data-label="Where state lives">Each object a "cell" with its own SQLite database; long-term state in your S3, GCS or Azure bucket.</td>
-          <td data-label="When a write is acknowledged">One node: once the bucket has it. Two or more: once one or two other nodes hold it on disk; the bucket upload follows.</td>
-          <td data-label="Run it yourself">Yes: a daemon on your machines.</td>
-          <td data-label="Licence">Apache-2.0</td>
-          <td data-label="Maturity">v0.6.3, which its docs call a beta release. Pull requests disabled; patches by email under a CLA.</td>
-        </tr>
-        <tr>
-          <th scope="row">Rivet</th>
-          <td data-label="Model and languages">Actors: long-lived processes with in-memory state, SQLite, WebSockets and scheduling. RivetKit for TypeScript and Rust; Python and Swift experimental.</td>
-          <td data-label="Where state lives">Its site says each actor's data lives in a bucket you own; its state docs also mention a durable volume.</td>
-          <td data-label="When a write is acknowledged">"every committed write is replicated before it is acknowledged"; in-memory <code>vars</code> are never persisted.</td>
-          <td data-label="Run it yourself">Yes: Docker, Kubernetes or a VM.</td>
-          <td data-label="Licence">Apache-2.0</td>
-          <td data-label="Maturity">v3.1.1 (November 2026).</td>
-        </tr>
-        <tr>
-          <th scope="row">Golem</th>
-          <td data-label="Model and languages">Durable agents as WebAssembly components: Rust, TypeScript, Scala and MoonBit.</td>
-          <td data-label="Where state lives">An append-only oplog per agent, on Redis, PostgreSQL or SQLite, archived to S3 or a filesystem; recovery replays it.</td>
-          <td data-label="When a write is acknowledged">Not stated on the pages we read.</td>
-          <td data-label="Run it yourself">Yes: a single binary, your infrastructure, or Golem Cloud.</td>
-          <td data-label="Licence">Business Source License 1.1, Apache-2.0 four years after each release.</td>
-          <td data-label="Maturity">v1.6.3 (November 2026).</td>
-        </tr>
-        <tr>
-          <th scope="row">Microsoft Orleans</th>
-          <td data-label="Model and languages">Virtual actors ("grains") in .NET.</td>
-          <td data-label="Where state lives">A storage provider you choose: ADO.NET databases, Azure Storage, Cosmos DB, DynamoDB, Redis and others.</td>
-          <td data-label="When a write is acknowledged">When <code>WriteStateAsync</code> completes; a storage failure throws from it. State is not persisted until you call it.</td>
-          <td data-label="Run it yourself">Yes: wherever .NET runs, including Kubernetes.</td>
-          <td data-label="Licence">MIT</td>
-          <td data-label="Maturity">Used at Microsoft in Azure, Xbox and others; v10.4.2.</td>
-        </tr>
-        <tr>
-          <th scope="row">Dapr actors</th>
-          <td data-label="Model and languages">Turn-based actors behind a sidecar. Actor SDKs for .NET, Python, Java, Go, PHP and JavaScript.</td>
-          <td data-label="Where state lives">One transactional state store you configure for actors.</td>
-          <td data-label="When a write is acknowledged">Not stated on the pages we read.</td>
-          <td data-label="Run it yourself">Yes: open source.</td>
-          <td data-label="Licence">Apache-2.0</td>
-          <td data-label="Maturity">A CNCF graduated project; v1.19.1.</td>
-        </tr>
-        <tr>
-          <th scope="row">Temporal</th>
-          <td data-label="Model and languages">Durable execution of workflows. SDKs for Go, Java, Python, TypeScript, .NET, Ruby, PHP and Rust.</td>
-          <td data-label="Where state lives">Each workflow's event history, in the Temporal Service's database: Cassandra, PostgreSQL or MySQL.</td>
-          <td data-label="When a write is acknowledged">Not stated as such; the event history is the source of truth that recovery replays.</td>
-          <td data-label="Run it yourself">Yes: the Temporal Service is open source.</td>
-          <td data-label="Licence">MIT</td>
-          <td data-label="Maturity">v1.32.2 (November 2026).</td>
-        </tr>
-        <tr>
-          <th scope="row">Restate</th>
-          <td data-label="Model and languages">Durable execution; Virtual Objects with a single writer per key. SDKs for TypeScript, Java, Kotlin, Python, Go, Rust and Ruby.</td>
-          <td data-label="Where state lives">The Restate Server's log, on disk and replicated, with RocksDB for state; snapshots in S3 for clusters.</td>
-          <td data-label="When a write is acknowledged">In a cluster, a majority must accept new log entries; the exact point of the answer is not stated.</td>
-          <td data-label="Run it yourself">Yes: a single binary, one node or a cluster.</td>
-          <td data-label="Licence">Server: Business Source License 1.1, Apache-2.0 after four years. SDKs: MIT.</td>
-          <td data-label="Maturity">v1.8.1 (November 2026).</td>
-        </tr>
+        {% endfor %}
       </tbody>
+      {% endfor %}
     </table>
   </div>
-  <p class="small">Versions are the latest releases on each project's GitHub on 2026-11-14.</p>
 </section>
 
 <section class="band" aria-labelledby="picks-title">
   <div class="wrap rail">
     <div class="rail-head">
       <h2 id="picks-title">Pick them instead when</h2>
-      <p>WasmKeep is young. Each of these is the better choice for someone; this is when it is likely to be you.</p>
+      <p>WasmKeep is young. These alternatives have different strengths; use the reviewed capabilities above and each project’s own docs to evaluate your application.</p>
       <p class="small">More on <a href="#durable-objects">Durable Objects</a> and <a href="#celld">celld</a> below, with measurements.</p>
     </div>
     <ul class="picks">
       <li>
         <h3><a href="#durable-objects">Cloudflare Durable Objects</a></h3>
-        <p>You want a managed global network, years of production at Cloudflare's scale, a mature JavaScript ecosystem and no servers to run. At small and medium scale it is likely as cheap or cheaper too: see <a href="/cost/">Cost</a>.</p>
+        <p>You want a managed global network, years of production at Cloudflare's scale, a mature JavaScript ecosystem and no servers to run. Compare the costs for your workload on the <a href="/cost/">Cost</a> page.</p>
       </li>
       <li>
         <h3><a href="#celld">celld</a></h3>
@@ -158,7 +98,7 @@
       </li>
       <li>
         <h3>Golem</h3>
-        <p>You want durable execution of a whole agent, replaying its interactions after a failure, rather than a database per actor that you write to yourself.</p>
+        <p>You want durable execution of a whole agent, replaying its interactions after a failure, with embedded SQLite available for structured per-agent state.</p>
       </li>
       <li>
         <h3>Orleans</h3>
@@ -182,10 +122,11 @@
 
 <section class="wrap section" id="durable-objects" aria-labelledby="do-title">
   <h2 id="do-title">In detail: Cloudflare Durable Objects</h2>
-  <p>The closest programming model: one addressable object per name, one event at a time, its own storage, alarms and WebSockets. Two things carry the name: <strong>workerd</strong>, the open-source runtime, and <strong>Cloudflare Workers</strong>, the hosted platform. The numbers below compare runtimes; much of what makes Workers strong is the platform.</p>
+  <p>The closest programming model: an addressable object with its own storage, alarms and WebSockets. Do not assume identical scheduling: check the input/output gates and behavior across awaits in Cloudflare’s docs against WasmKeep’s whole-event serialization. Two things carry the name: <strong>workerd</strong>, the open-source runtime, and <strong>Cloudflare Workers</strong>, the hosted platform. The measurements below are historical local runtime comparisons, not measurements of Cloudflare’s managed network or of WasmKeep 0.4.2.</p>
   <h3>The same counter in both runtimes</h3>
   <p class="small">From <a href="{{ docs }}/benchmarks.html#wasmkeep-against-workerd-the-same-counter">WasmKeep against workerd, the same counter</a>: an AMD Ryzen 9 7950X workstation, both runtimes' data on tmpfs, eight clients over loopback, workerd 1.20261016.1 (<a href="{{ blob }}/bench/results/2026-11-06-351ea57.csv">2026-11-06-351ea57.csv</a>).</p>
-  <div class="table-scroll">
+  <p class="table-hint small">Scroll horizontally to see all columns. With a keyboard, focus the table and use the arrow keys.</p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Counter runtime measurements">
     <table class="price-table num-table">
       <thead><tr><th scope="col">Counter</th><th scope="col">WasmKeep, Rust</th><th scope="col">WasmKeep, TypeScript</th><th scope="col">workerd</th></tr></thead>
       <tbody>
@@ -208,10 +149,11 @@
 <section class="band" id="celld" aria-labelledby="celld-title">
   <div class="wrap section">
   <h2 id="celld-title">In detail: celld</h2>
-  <p>The same idea, built on the Workers API: Durable Object-style actors on your own servers, each with its own SQLite database, replicated to a bucket. Both ran the same counter on the same machine and the same local bucket. celld v0.6.3, five runs of each, medians with the lowest and highest in brackets.</p>
+  <p>In the measured celld v0.6.3 setup, the same idea was built on the Workers API: Durable Object-style actors on your own servers, each with its own SQLite database, replicated to a bucket. Both ran the same counter on the same machine and the same local bucket. These historical runs predate WasmKeep 0.4.2 and do not verify the latest celld release. celld v0.6.3, five runs of each, medians with the lowest and highest in brackets.</p>
   <h3>One node, every write in the bucket, data on disk</h3>
   <p class="small">From <a href="{{ docs }}/benchmarks.html#wasmkeep-against-celld-every-write-in-a-bucket">WasmKeep against celld, every write in a bucket</a>: the workstation above, MinIO on loopback with its data on tmpfs, each runtime's data on btrfs on an encrypted NVMe SSD (<a href="{{ blob }}/bench/results/2026-11-11-488369d-bucket-minio-tmpfs-data-disk-r1.csv">…-data-disk-r1.csv</a> to r5).</p>
-  <div class="table-scroll">
+  <p class="table-hint small">Scroll horizontally to see all columns. With a keyboard, focus the table and use the arrow keys.</p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Single-node bucket measurements">
     <table class="price-table num-table">
       <thead><tr><th scope="col">Counter on a bucket</th><th scope="col">WasmKeep, durable</th><th scope="col">celld</th></tr></thead>
       <tbody>
@@ -226,8 +168,9 @@
     </table>
   </div>
   <h3>Three nodes, a node killed under writes, data on disk</h3>
-  <p class="small">From <a href="{{ docs }}/benchmarks.html#three-nodes-wasmkeep-against-celld">Three nodes: WasmKeep against celld</a>: three processes of each on the same workstation, the same local MinIO, plain HTTP between nodes (celld has no TLS between peers), default lease timings, each node killed in turn while 90 ledger actors were written (<a href="{{ blob }}/bench/results/2026-11-11-c556110-cluster-minio-tmpfs-nodes-disk-r1.csv">…-nodes-disk-r1.csv</a> to r5). celld "fleet", its default with two or more nodes, answers once a follower has the write on disk; "bucket" waits for the bucket, as WasmKeep does.</p>
-  <div class="table-scroll">
+  <p class="small">From <a href="{{ docs }}/benchmarks.html#three-nodes-wasmkeep-against-celld">Three nodes: WasmKeep against celld</a>: three processes of each on the same workstation, the same local MinIO, plain HTTP between nodes (the tested celld v0.6.3 setup had no TLS between peers), default lease timings, each node killed in turn while 90 ledger actors were written (<a href="{{ blob }}/bench/results/2026-11-11-c556110-cluster-minio-tmpfs-nodes-disk-r1.csv">…-nodes-disk-r1.csv</a> to r5). The tested celld "fleet" mode, its default with two or more nodes, answered once a follower has the write on disk; "bucket" waited for the bucket, as WasmKeep’s durable writes do.</p>
+  <p class="table-hint small">Scroll horizontally to see all columns. With a keyboard, focus the table and use the arrow keys.</p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Three-node bucket measurements">
     <table class="price-table num-table">
       <thead><tr><th scope="col">Three nodes</th><th scope="col">WasmKeep, durable</th><th scope="col">celld, fleet</th><th scope="col">celld, bucket</th></tr></thead>
       <tbody>
@@ -245,23 +188,24 @@
     <li>Not measured here: nodes on separate machines with a disk each, a cloud bucket, and mutual TLS between WasmKeep nodes. Which answers a durable write sooner on a cloud bucket is open.</li>
     <li>celld's fleet mode was its slowest on a shared disk in every run, which the benchmarks do not explain.</li>
   </ul>
-  <p>Pick celld for Workers code you already have, and for faster takeover and start with its defaults; pick WasmKeep for compiled languages, less memory per actor, faster reads and encrypted traffic between nodes. <a href="{{ docs }}/compared-with-celld.html">WasmKeep and celld</a> has the full comparison.</p>
+  <p>Evaluate celld for existing Workers code. In these runs celld had faster startup and takeover, lower write p99 on disk, and higher bucket-mode throughput. WasmKeep used less memory and had faster reads. Cloud-bucket performance remains unmeasured head to head; these are workload-specific results, not general rankings. <a href="{{ docs }}/compared-with-celld.html">WasmKeep and celld</a> has the full comparison.</p>
   </div>
 </section>
 
 <section class="wrap section" aria-labelledby="src-title">
   <div>
     <h2 id="src-title">Sources</h2>
-    <p class="small">Each project's own pages, read on 2026-11-14.</p>
+    <p class="small">WasmKeep: local documentation read on <time datetime="2026-11-15">2026-11-15</time>, with released behavior checked against the 0.4.2 changelog and future work against the current roadmap. Competitors: first-party documentation reviewed on the same date. The matrix links each cell to the relevant page; starting points are collected below. These are documentation checks, not new runtime tests.</p>
     <ul class="sources">
-      <li>Cloudflare Durable Objects: <a href="https://developers.cloudflare.com/durable-objects/get-started/">get started</a>, <a href="https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/">SQLite storage API</a>, <a href="https://developers.cloudflare.com/durable-objects/platform/limits/">limits</a>, <a href="https://developers.cloudflare.com/durable-objects/release-notes/">release notes</a>, <a href="https://blog.cloudflare.com/durable-objects-ga/">GA announcement</a>; workerd: <a href="https://github.com/cloudflare/workerd">README and licence</a>, <a href="https://github.com/cloudflare/workerd/blob/main/src/workerd/server/workerd.capnp">workerd.capnp</a> (cluster mode).</li>
-      <li>celld: <a href="https://github.com/denoland/celld">README and licence</a>, <a href="https://github.com/denoland/celld/blob/main/docs/limitations.md">limitations</a>.</li>
-      <li>Rivet: <a href="https://rivet.dev/">rivet.dev</a>, <a href="https://rivet.dev/docs/actors/">actors</a>, <a href="https://rivet.dev/actors/docs/state/">state</a>, <a href="https://github.com/rivet-dev/rivet">repository</a>.</li>
-      <li>Golem: <a href="https://learn.golem.cloud/">learn.golem.cloud</a>, <a href="https://learn.golem.cloud/v1.6/concepts/durable-execution">durable execution</a>, <a href="https://learn.golem.cloud/v1.6/operate/persistence">persistence</a>, <a href="https://github.com/golemcloud/golem">repository and licence</a>.</li>
-      <li>Orleans: <a href="https://learn.microsoft.com/en-us/dotnet/orleans/overview">overview</a>, <a href="https://learn.microsoft.com/en-us/dotnet/orleans/grains/grain-persistence/">grain persistence</a>, <a href="https://github.com/dotnet/orleans">repository</a>.</li>
-      <li>Dapr: <a href="https://docs.dapr.io/developing-applications/building-blocks/actors/actors-overview/">actors overview</a>, <a href="https://docs.dapr.io/developing-applications/sdks/">SDKs</a>, <a href="https://dapr.io/">dapr.io</a>, <a href="https://github.com/dapr/dapr">repository</a>.</li>
-      <li>Temporal: <a href="https://temporal.io/">temporal.io</a>, <a href="https://docs.temporal.io/workflows">workflows</a>, <a href="https://docs.temporal.io/encyclopedia/temporal-sdks">SDKs</a>, <a href="https://docs.temporal.io/temporal-service/persistence">persistence</a>, <a href="https://github.com/temporalio/temporal">repository</a>.</li>
-      <li>Restate: <a href="https://restate.dev/">restate.dev</a>, <a href="https://docs.restate.dev/">docs</a>, <a href="https://github.com/restatedev/restate">repository and licence</a>.</li>
+      <li id="source-wasmkeep"><strong>WasmKeep</strong> — read locally 2026-11-15: <a href="{{ blob }}/README.md">README</a>, <a href="{{ blob }}/CHANGELOG.md#042">0.4.2 changelog</a>, <a href="{{ blob }}/docs/concepts.md">concepts</a>, <a href="{{ blob }}/docs/cluster.md">cluster</a>, <a href="{{ blob }}/docs/failover-and-scaling.md">failover and scaling</a>, <a href="{{ blob }}/docs/deploy/backup-and-restore.md">backup limits</a>, <a href="{{ config.extra.github }}/blob/main/ROADMAP.md">current roadmap</a>. Measurements: <a href="{{ docs }}/benchmarks.html">benchmark methodology</a> and the individual CSVs linked above.</li>
+      <li id="source-cloudflare"><strong>Cloudflare Durable Objects</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://developers.cloudflare.com/durable-objects/">actor model</a>, <a href="https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/">storage</a>, <a href="https://developers.cloudflare.com/durable-objects/best-practices/rules-of-durable-objects/">durability</a>, <a href="https://developers.cloudflare.com/d1/best-practices/import-export-data/">backup limits</a>, <a href="https://developers.cloudflare.com/workflows/">workflows</a>, <a href="https://developers.cloudflare.com/durable-objects/reference/data-location/">placement</a>, <a href="https://github.com/cloudflare/workerd">licence</a>.</li>
+      <li id="source-celld"><strong>celld</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://github.com/denoland/celld/blob/main/docs/services/durable-objects.md">actor model</a>, <a href="https://github.com/denoland/celld/blob/main/docs/guarantees.md">backup limits</a>, <a href="https://github.com/denoland/celld/blob/main/docs/services/workflows.md">workflows</a>, <a href="https://github.com/denoland/celld/blob/main/docs/README.md#add-nodes">placement</a>, <a href="https://github.com/denoland/celld/blob/main/LICENSE">licence</a>.</li>
+      <li id="source-rivet"><strong>Rivet</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://rivet.dev/actors/docs/">actor model</a>, <a href="https://rivet.dev/actors/docs/sqlite/">storage</a>, <a href="https://rivet.dev/docs/deploy/self-host/control-plane/storage/">durability</a>, <a href="https://rivet.dev/docs/deploy/self-host/control-plane/backups/">backup limits</a>, <a href="https://rivet.dev/docs/">workflows</a>, <a href="https://rivet.dev/actors/docs/lifecycle/">placement</a>, <a href="https://github.com/rivet-dev/rivet/blob/main/LICENSE">licence</a>.</li>
+      <li id="source-golem"><strong>Golem</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://learn.golem.cloud/v1.6/concepts/agents">actor model</a>, <a href="https://learn.golem.cloud/v1.6/develop/embedded-databases">storage</a>, <a href="https://learn.golem.cloud/v1.6/concepts/durable-execution">durability</a>, <a href="https://learn.golem.cloud/v1.6/develop/snapshotting">backup limits</a>, <a href="https://learn.golem.cloud/v1.6/operate/shard-manager">placement</a>, <a href="https://github.com/golemcloud/golem/blob/main/LICENSE">licence</a>.</li>
+      <li id="source-orleans"><strong>Orleans</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://learn.microsoft.com/en-us/dotnet/orleans/overview">actor model</a>, <a href="https://github.com/dotnet/orleans/releases/tag/v10.4.0">storage</a>, <a href="https://learn.microsoft.com/en-us/dotnet/orleans/grains/grain-persistence/">durability</a>, <a href="https://github.com/dotnet/orleans">licence</a>.</li>
+      <li id="source-dapr"><strong>Dapr actors</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://docs.dapr.io/developing-applications/building-blocks/actors/actors-overview/">actor model</a>, <a href="https://docs.dapr.io/reference/components-reference/supported-state-stores/">storage</a>, <a href="https://docs.dapr.io/developing-applications/building-blocks/state-management/state-management-overview/">durability</a>, <a href="https://docs.dapr.io/reference/api/actors_api/">backup limits</a>, <a href="https://docs.dapr.io/developing-applications/building-blocks/workflow/workflow-overview/">workflows</a>, <a href="https://docs.dapr.io/developing-applications/building-blocks/actors/actors-features-concepts/">placement</a>, <a href="https://github.com/dapr/dapr">licence</a>.</li>
+      <li id="source-temporal"><strong>Temporal</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://docs.temporal.io/workflow-execution">actor model</a>, <a href="https://docs.temporal.io/temporal-service/persistence">storage</a>, <a href="https://docs.temporal.io/cloud/export">backup limits</a>, <a href="https://docs.temporal.io/task-queue">placement</a>, <a href="https://github.com/temporalio/temporal">licence</a>.</li>
+      <li id="source-restate"><strong>Restate</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://docs.restate.dev/foundations/services">actor model</a>, <a href="https://docs.restate.dev/develop/ts/state">storage</a>, <a href="https://docs.restate.dev/server/clusters">durability</a>, <a href="https://docs.restate.dev/server/snapshots">backup limits</a>, <a href="https://github.com/restatedev/restate/blob/main/LICENSE">licence</a>.</li>
     </ul>
   </div>
 </section>

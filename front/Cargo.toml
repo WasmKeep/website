@@ -15,7 +15,7 @@ crate-type = ["cdylib"]
 [dependencies]
 # Without the default `actor` feature: a front imports `actors`, `calls`
 # and `env` only (world `wasmkeep:actor/front`).
-wasmkeep-sdk = { version = "0.4.0", default-features = false }
+wasmkeep-sdk = { version = "=0.4.2", default-features = false }
 
 [build-dependencies]
 # The cachebust hash Zola puts in `?h=` (the first 20 hex digits of the

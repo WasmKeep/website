@@ -6,18 +6,19 @@
 {%- set v = config.extra.release -%}
 <header class="wrap page-head">
   <h1>Get started</h1>
-  <p class="lead">Scaffold a TypeScript app with a front and a durable counter, then develop it with hot reload. The tutorials in the documentation take it from there.</p>
+  <p class="lead">Scaffold a TypeScript app with a front and a durable counter, then develop it with hot reload. Start locally: {{ config.extra.release }} is pre-alpha and not yet production-ready.</p>
+  <nav class="page-toc" aria-label="On this page"><a href="#install">Install</a><a href="#create">Create an app</a><a href="#sdk">Manual SDK setup</a><a href="#tutorials">Tutorials</a></nav>
 </header>
 <div class="wrap rail rail-rev">
   <ol class="steps">
     <li>
-      <h2>Install the binary</h2>
+      <h2 id="install">Install the binary</h2>
       <p>On Linux, x86_64 or aarch64 (glibc 2.28 or newer). Name the version: releases are pre-releases for now, so there is no <code>latest</code>.</p>
       {% include "partials/install.html" %}
       <p class="small">Every file of a release is signed: <a href="{{ docs }}/deploy/single-node.html">check a download</a> before you trust it. On macOS and Windows, use the image <code>ghcr.io/wasmkeep/wasmkeep:{{ v }}</code> or build from source.</p>
     </li>
     <li>
-      <h2>Create an app and run it</h2>
+      <h2 id="create">Create an app and run it</h2>
       <p>With Node.js and npm installed, scaffold the shipped TypeScript app. The directory must be new or empty:</p>
       <pre class="term" data-copy tabindex="0"><code>wasmkeep new my-app --lang typescript --front
 cd my-app
@@ -27,24 +28,25 @@ wasmkeep dev</code></pre>
       <p class="small">The scaffold is built into the CLI; installing dependencies needs the network. Rust is also supported with <code>--lang rust</code>. See <a href="{{ docs }}/tutorials/first-actor.html#starting-a-project-with-wasmkeep-new">starting a project</a> for the commands and options.</p>
     </li>
     <li>
-      <h2>Alternative: set up the SDK yourself</h2>
+      <h2 id="sdk">Alternative: set up the SDK yourself</h2>
       <p>Install the SDK of your language at the version of your server, then follow its guide. Languages need a toolchain that builds WASI 0.2 components for WasmKeep's interfaces; <a href="{{ docs }}/languages.html">SDK features vary by language</a>.</p>
-      <div class="table-scroll">
+      <p class="table-hint small">Scroll horizontally to see all columns. With a keyboard, focus the table and use the arrow keys.</p>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="SDK installation commands">
         <table class="price-table">
           <thead><tr><th scope="col">Language</th><th scope="col">Install</th><th scope="col">Start from</th></tr></thead>
           <tbody>
-            <tr><td>Rust</td><td>cargo add wasmkeep-sdk@{{ v }}</td><td><a href="{{ docs }}/tutorials/first-actor.html">Your first actor in 10 minutes</a></td></tr>
-            <tr><td>TypeScript</td><td>npm install @wasmkeep/sdk@{{ v }}</td><td><a href="{{ config.extra.tree }}/sdks/typescript">its README</a></td></tr>
-            <tr><td>Python</td><td>pip install wasmkeep=={{ v }}</td><td><a href="{{ config.extra.tree }}/sdks/python">its README</a></td></tr>
-            <tr><td>Go (TinyGo)</td><td>go get github.com/wasmkeep/wasmkeep/sdks/go@v{{ v }}</td><td><a href="{{ config.extra.tree }}/sdks/go">its README</a></td></tr>
+            <tr><td>Rust</td><td><code>cargo add wasmkeep-sdk@{{ v }}</code></td><td><a href="{{ docs }}/tutorials/first-actor.html">Your first actor in 10 minutes</a></td></tr>
+            <tr><td>TypeScript</td><td><code>npm install @wasmkeep/sdk@{{ v }}</code></td><td><a href="{{ config.extra.tree }}/sdks/typescript">its README</a></td></tr>
+            <tr><td>Python</td><td><code>pip install wasmkeep=={{ v }}</code></td><td><a href="{{ config.extra.tree }}/sdks/python">its README</a></td></tr>
+            <tr><td>Go (TinyGo)</td><td><code>go get github.com/wasmkeep/wasmkeep/sdks/go@v{{ v }}</code></td><td><a href="{{ config.extra.tree }}/sdks/go">its README</a></td></tr>
             <tr><td>C, Zig</td><td>the SDK archive from the release</td><td>the README in each archive</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="small">Then develop with hot reload: <code>wasmkeep dev</code> rebuilds and swaps on every save, keeping the data.</p>
+      <p class="small">Manual setup is an alternative to the scaffold above. Continue with your language’s guide, then run <code>wasmkeep dev</code>.</p>
     </li>
     <li>
-      <h2>Follow the tutorials</h2>
+      <h2 id="tutorials">Follow the tutorials</h2>
       <ul>
         <li><a href="{{ docs }}/tutorials/first-actor.html">Your first actor</a>: a counter with its own database.</li>
         <li><a href="{{ docs }}/tutorials/first-app.html">Your first app</a>: a front and its classes, run with <code>wasmkeep dev</code>.</li>
@@ -62,7 +64,7 @@ wasmkeep dev</code></pre>
     </div>
     <div class="callout">
       <h3>This site's source is an example</h3>
-      <p>The site is built as a WasmKeep app: a Rust front that serves the pages and calls the language wall's counter actors. The site is not deployed yet; run it locally to try the app. Its source is a complete app.</p>
+      <p>The site is built as a WasmKeep app: a Rust front that serves the pages and calls the language wall's counter actors. The complete app is available in the source repository. It is not deployed yet; run it locally to try the wall.</p>
       <p><a href="{{ config.extra.source }}">WasmKeep/website</a></p>
     </div>
     <div class="callout">

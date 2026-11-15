@@ -1,0 +1,22 @@
+{# A shared continuation keeps the reading order visible on every inner page. #}
+{% set path = current_path or "" %}
+{% set steps = [
+  ["/how-it-works/", "How it works", "/saved/", "What saved means", "See what a reply promises, and what another node can restore.", "/", "Home"],
+  ["/saved/", "What saved means", "/compare/", "Compare", "Compare storage contracts, languages and operational trade-offs.", "/how-it-works/", "How it works"],
+  ["/compare/", "Compare", "/cost/", "Cost", "Estimate the bill with your workload, then read the assumptions.", "/saved/", "What saved means"],
+  ["/cost/", "Cost", "/get-started/", "Get started", "Install 0.4.2, scaffold an app and try it locally.", "/compare/", "Compare"],
+  ["/features/", "Features", "/how-it-works/", "How it works", "Explore how fronts, actors and the bucket work together.", "/", "Home"],
+  ["/get-started/", "Get started", "/#wall", "Try the language wall", "See the counter actors in this app, then explore their source.", "/cost/", "Cost"]
+] %}
+{% for step in steps %}
+{% if path == step[0] %}
+<nav class="reading-path wrap" aria-label="Continue exploring">
+  <a class="reading-back" href="{{ step[5] }}">Back: {{ step[6] }}</a>
+  <a class="reading-next" href="{{ step[2] }}">
+    <span class="eyebrow">Next: {{ step[3] }}</span>
+    <span>{{ step[4] }}</span>
+    {{<icon name="arrow" />}}
+  </a>
+</nav>
+{% endif %}
+{% endfor %}

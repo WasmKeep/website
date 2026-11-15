@@ -1,24 +1,41 @@
 // The language wall, enhanced: adds one without reloading the page, and
-// refreshes the counts while the page is visible. Without this script the
-// wall still shows the counts (rendered by the front) and each button is
-// a plain form post.
+// receives broadcasts, with polling while visible as a fallback. Without
+// this script the wall still shows the counts (rendered by the front) and
+// each button is a plain form post.
 (() => {
   "use strict";
   const wall = document.getElementById("wall");
   if (!wall || !window.fetch) return;
   const status = wall.querySelector(".wall-status");
+  const items = new Map(Array.from(wall.querySelectorAll(".wall-item[data-lang]"),
+    (item) => [item.dataset.lang, item]));
+  const counts = new Map();
+  let snapshot = { wall: [] };
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   const show = (lang, count) => {
-    const item = wall.querySelector(`.wall-item[data-lang="${lang}"]`);
+    const item = items.get(lang);
     const out = item && item.querySelector(".wall-count");
-    if (!out || count === null || count === undefined) return;
+    if (!out || !Number.isSafeInteger(count) || count < 0) return;
+    // Counters only increment. Concurrent POST replies, snapshots and
+    // notifications can arrive out of order; never move a tile backwards.
+    count = Math.max(count, counts.get(lang) || 0);
+    counts.set(lang, count);
     const text = String(count);
     if (out.textContent !== text) {
       out.textContent = text;
       out.classList.remove("bumped");
-      void out.offsetWidth;
-      out.classList.add("bumped");
+      if (!reducedMotion.matches) {
+        void out.offsetWidth;
+        out.classList.add("bumped");
+      }
     }
+  };
+
+  const identifyCurrent = () => {
+    identify({ wall: snapshot.wall.map((entry) => counts.has(entry.lang)
+      ? { ...entry, count: counts.get(entry.lang), state: "live" }
+      : entry) });
   };
 
   // "Behind the tile": the live actors, from the front's answer.
@@ -52,12 +69,70 @@
       const r = await fetch("/api/wall", { headers: { Accept: "application/json" } });
       if (!r.ok) return;
       const body = await r.json();
+      if (!Array.isArray(body.wall)) return;
+      snapshot = body;
       for (const entry of body.wall || []) show(entry.lang, entry.count);
-      identify(body);
+      identifyCurrent();
     } catch (_) {
       // Offline or the front is restarting: keep what is shown.
     }
   };
+
+  let socket;
+  let retry;
+  let backoff = 1000;
+  let stopped = false;
+  const connect = () => {
+    if (stopped || socket || !window.WebSocket) return;
+    try {
+      const url = new URL("/api/wall/live", window.location.href);
+      url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      socket = new WebSocket(url);
+    } catch (_) {
+      // Unsupported or blocked: the existing GET/POST behaviour still works.
+      return;
+    }
+    const connection = socket;
+    connection.addEventListener("open", () => {
+      backoff = 1000;
+      // Catch writes between the initial GET and opening, or while offline.
+      refresh();
+    });
+    connection.addEventListener("message", (event) => {
+      if (typeof event.data !== "string" || event.data.length > 128) return;
+      try {
+        const body = JSON.parse(event.data);
+        if (!body || !items.has(body.lang)) return;
+        show(body.lang, body.count);
+        identifyCurrent();
+      } catch (_) {
+        // A malformed message must not break the wall.
+      }
+    });
+    connection.addEventListener("error", () => connection.close());
+    connection.addEventListener("close", () => {
+      if (socket !== connection) return;
+      socket = null;
+      if (stopped) return;
+      retry = setTimeout(connect, backoff + Math.random() * backoff / 4);
+      backoff = Math.min(backoff * 2, 30000);
+    });
+  };
+
+  // Release the connection on navigation, including back/forward caching.
+  window.addEventListener("pagehide", () => {
+    stopped = true;
+    clearTimeout(retry);
+    const connection = socket;
+    socket = null;
+    if (connection) connection.close();
+  });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      stopped = false;
+      refresh().then(connect);
+    }
+  });
 
   wall.addEventListener("submit", async (event) => {
     const form = event.target;
@@ -83,7 +158,7 @@
     }
   });
 
-  refresh();
+  refresh().then(connect);
   setInterval(() => {
     if (document.visibilityState === "visible") refresh();
   }, 15000);

@@ -10,6 +10,7 @@
 #             `scripts/fetch-components.sh --cli`, then `wasmkeep` on PATH)
 #   PORT      the port to listen on, on 127.0.0.1 (default 18080)
 # ZOLA or ZOLA_IMAGE are passed on to the build (scripts/build-site.sh).
+# Python 3 (stdlib only) checks the WebSocket handshake and broadcasts.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -51,6 +52,9 @@ for _ in $(seq 600); do
   sleep 1
 done
 
+# Validate all generated destinations and anchors without external requests.
+python3 scripts/check-site.py
+
 failures=0
 check() {
   local what=$1 got=$2 want=$3
@@ -68,17 +72,17 @@ home=$(curl -fs "$base/")
 check "GET / is the home page" "$(grep -cE 'id="?wall"?[ >]' <<<"$home")" 1
 check "GET / has the wall's counts filled in" "$(grep -c '%wall:' <<<"$home")" 0
 check "GET / has the code tabs" "$(grep -cE 'id="?code-rust"?[ >]' <<<"$home")" 1
-for page in how-it-works features compare cost get-started; do
+for page in how-it-works saved features compare cost get-started; do
   check "GET /$page/" "$(status "$base/$page/")" 200
 done
 check "GET /how-it-works redirects" "$(status "$base/how-it-works")" 308
-check "the cost page lists dated prices" "$(curl -fs "$base/cost/" | grep -c 'read on 2026-11-14')" 1
+check "the cost page lists dated prices" "$(curl -fs "$base/cost/" | grep -c 'Prices used: verified 2026-11-15')" 1
 check "GET /favicon.ico" "$(header content-type "$base/favicon.ico")" "image/x-icon"
-for js in tabs.js wall.js failover.js copy.js; do
+for js in tabs.js wall.js failover-model.js failover.js copy.js; do
   url=$(grep -o "/$js?h=[0-9a-f]*" <<<"$home" | head -1)
   check "the home page loads $js" "$(header content-type "$base$url")" "text/javascript; charset=utf-8"
 done
-for pair in how-it-works:failover.js cost:cost.js; do
+for pair in how-it-works:failover-model.js how-it-works:failover.js cost:cost-model.js cost:cost.js saved:saved.js; do
   page=${pair%%:*} js=${pair#*:}
   url=$(curl -fs "$base/$page/" | grep -o "/$js?h=[0-9a-f]*" | head -1)
   check "/$page/ loads $js" "$(header content-type "$base$url")" "text/javascript; charset=utf-8"
@@ -101,6 +105,14 @@ check "POST /api/wall/rust adds one" "$added" "{\"lang\":\"rust\",\"count\":$(($
 check "POST /api/wall/cobol is refused" "$(status -X POST "$base/api/wall/cobol")" 404
 check "a cross-site POST is refused" "$(status -X POST -H 'sec-fetch-site: cross-site' "$base/api/wall/rust")" 403
 check "the counters are internal" "$(status "$base/actor/rust/wall")" 403
+check "the wall room is internal" "$(status "$base/actor/wall-room/main/notify")" 403
+check "live requires a WebSocket upgrade" "$(status "$base/api/wall/live")" 426
+check "a forged upgrade mark is refused" "$(status -H 'x-wasmkeep-upgrade: websocket' "$base/api/wall/live")" 426
+check "the CSP allows same-origin connections" "$(header content-security-policy "$base/" | grep -c "connect-src 'self';")" 1
+if ! python3 scripts/smoke-websocket.py "$base"; then
+  echo "FAIL WebSocket broadcast"
+  failures=$((failures + 1))
+fi
 
 if ((failures)); then
   echo "--- wasmkeep dev log" >&2
