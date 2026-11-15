@@ -31,9 +31,9 @@
   --space-4: 1rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
-  --section-space: clamp(2.5rem, 5vw, 4rem);
+  --section-space: clamp(3.5rem, 5.5vw, 6rem);
   --radius: 8px;
-  --wrap: 74rem;
+  --wrap: 84rem;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
   color-scheme: light dark;
@@ -80,7 +80,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 1.0625rem/1.6 var(--sans);
+  font: 1rem/1.7 var(--sans);
   font-variant-numeric: tabular-nums;
   overflow-wrap: break-word;
 }
@@ -1170,7 +1170,7 @@ code {
 .cmp-table-wrap {
   max-width: 100%;
   overflow: auto;
-  max-height: 75vh;
+  // Rows use the document scroll; only columns can overflow.
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
   background: var(--surface);
@@ -1653,52 +1653,112 @@ code {
   }
 }
 
-// The stage scrolls only when extra nodes/actors need more room. In the
-// narrow layout this preserves readable SVG text instead of shrinking it.
-.sim[data-enhanced] .sim-fig {
-  max-height: 44rem;
-  overflow: auto;
-  scrollbar-gutter: stable;
-  overscroll-behavior: contain;
-  > svg { max-height: none; }
+// Keep the scene and every action together, including on small screens.
+.sim[data-enhanced] {
+  .sim-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 1rem; position: relative; }
+  .sim-stage { min-width: 0; }
+  .sim-fig { height: 400px; overflow: auto; overscroll-behavior: contain; }
+  .sim-fig > svg { height: 100%; max-height: none; }
+  .sim-rail { align-self: start; position: sticky; top: 1rem; min-width: 0; }
+  .sim-primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sim-primary > button { justify-content: center; padding-inline: 0.4rem; }
+  .sim-feed { padding: 0.6rem 0; border-top: 1px solid var(--rule); }
+  .sim-feed p { margin: 0; font-size: 0.8rem; line-height: 1.4; }
+  .sim-caption { font-weight: 600; min-height: 2.8em; }
+  .sim-bucket { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .sim-trace { height: 2.8em; overflow-y: auto; }
+  .sim-help { font-size: 0.8rem; line-height: 1.4; }
 }
-
-.sim-speed, .sim-stats {
-  font-size: 0.8rem;
-  color: var(--muted);
-  align-self: center;
+.sim-settings, .sim-history {
+  summary { cursor: pointer; min-height: 44px; padding: 0.6rem; border: 1px solid var(--rule-strong); border-radius: var(--radius); font-size: 0.85rem; background: var(--bg); }
 }
+.sim-settings-panel {
+  position: absolute; z-index: 5; right: 0; top: 6.5rem; width: min(20rem, 100%);
+  padding: 0.75rem; background: var(--surface); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: 0 8px 24px #0003;
+  display: grid; grid-template-columns: 1fr; gap: 0.3rem; max-height: min(31rem, 75dvh); overflow-y: auto;
+  label { font-size: 0.8rem; font-weight: 600; }
+  input { width: 100%; accent-color: var(--accent); min-height: 24px; }
+  select { width: 100%; font-size: 0.8rem; }
+  p { margin: 0; font-size: 0.75rem; }
+  .sim-secondary { margin: 0; }
+  .sim-secondary button { flex: 1 1 40%; font-size: 0.8rem; }
+}
+.sim-history { position: relative; }
+.sim-history[open] .sim-log { position: absolute; z-index: 4; right: 0; top: 100%; width: 100%; border: 1px solid var(--rule); }
+@media (max-width: 800px) {
+  .sim[data-enhanced] {
+    .sim-workspace { display: flex; flex-direction: column; gap: 0; }
+    .sim-rail { position: sticky; bottom: 0; top: auto; z-index: 3; width: 100%; background: var(--surface); border-top: 1px solid var(--rule); padding-bottom: env(safe-area-inset-bottom); }
+    .sim-primary { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.25rem; margin: 0.4rem 0; }
+    .sim-primary > button, .sim-settings summary { font-size: 0.75rem; padding: 0.3rem; min-height: 44px; line-height: 1.2; }
+    .sim-settings summary { display: flex; align-items: center; justify-content: center; }
+    .sim-settings-panel { top: auto; bottom: 100%; width: 100%; max-height: 310px; }
+    .sim-feed { padding: 0.35rem 0; }
+    .sim-help { margin: 0.25rem 0; }
+    .sim-stats { margin: 0; font-size: 0.7rem; }
+    .sim-history summary { border: 0; padding: 0.2rem; min-height: 24px; font-size: 0.75rem; }
+    .sim-history[open] .sim-log { top: auto; bottom: 100%; }
+  }
+}
+.sim-speed, .sim-stats { font-size: 0.8rem; color: var(--muted); align-self: center; }
 .sim-stats { font-variant-numeric: tabular-nums; }
 .sim-controls {
   align-items: center;
   select { max-width: 100%; min-width: 0; padding: 0.45rem 0.5rem; font: inherit; font-size: 0.92rem; color: var(--ink); background: var(--bg); border: 1px solid var(--rule-strong); border-radius: var(--radius); }
   button, select { min-height: 2.75rem; }
 }
+.sim-primary { margin-top: 0; }
+.sim-help { color: var(--muted); }
+.sim-trace { min-height: 2.8em; font: 0.82rem/1.5 var(--mono); overflow-wrap: anywhere; color: var(--accent); }
 .sim-lab {
-  margin-top: 1rem;
-  border-top: 1px solid var(--rule);
-  padding-top: 0.75rem;
-  summary { cursor: pointer; font-weight: 600; padding: 0.25rem 0; }
-  fieldset { min-width: 0; border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.75rem; }
-  legend { font-weight: 600; padding: 0 0.3rem; }
+  margin-top: 1rem; border-top: 1px solid var(--rule); padding-top: 0.75rem;
+  summary { cursor: pointer; font-weight: 600; padding: 0.25rem 0; margin-bottom: 0.75rem; }
   input[type="range"] { display: block; width: 100%; accent-color: var(--accent); margin: 0.75rem 0; }
   output { font: 0.8rem var(--mono); margin-left: 0.5rem; }
-  p { margin-bottom: 0; }
 }
-.sim-lab-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-top: 1rem; }
-.sim-actor-tools { grid-column: 1 / -1; }
-.sim-inspect { font: 0.8rem/1.7 var(--mono); overflow-wrap: anywhere; }
 .sim :is(button, select, input, summary, [tabindex]):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.sim [role="button"] { cursor: pointer; }
+.sim [role="button"]:focus-visible { outline: none; }
+.sim [role="button"]:focus-visible > :is(.dg-actor, .dg-node) { stroke: var(--accent); stroke-width: 3; }
+.sim .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .actor-g.sleeping .dg-actor { stroke: var(--muted); stroke-dasharray: 2 3; fill: var(--sunk); }
 .actor-g.deleted .dg-actor { stroke: var(--rule-strong); stroke-dasharray: 2 3; }
 .actor-g.moving .dg-actor, .actor-g.deleting .dg-actor { stroke: var(--warn); stroke-dasharray: 4 3; }
+.actor-g.dragging { opacity: 0.8; cursor: grabbing; }
+.node-g.drop-target .dg-node { stroke: var(--accent); stroke-width: 3; fill: var(--accent-soft); }
+.sim-packets { pointer-events: none; }
+.dg-trace { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.dg-trace.upload, .dg-trace.reply, .dg-trace.restore { stroke: var(--ok); }
+.dg-trace.wait { stroke: var(--warn); }
+.dg-trace.retry { stroke: var(--down); }
+.dg-packet.upload, .dg-packet.reply, .dg-packet.restore { fill: var(--ok); }
 .dg-packet.wait { fill: var(--warn); }
 .dg-packet.retry { fill: var(--down); }
+.dg-packet { stroke: var(--bg); stroke-width: 2; }
+.dg-request-id { fill: var(--ink); stroke: var(--bg); stroke-width: 3px; paint-order: stroke; font: 600 11px var(--mono); }
+.sim-menu {
+  width: min(22rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto;
+  margin: auto; padding: 1rem; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--rule-strong); border-radius: var(--radius);
+  box-shadow: 0 12px 48px #0003;
+  &::backdrop { background: #0006; }
+  button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: var(--radius); min-height: 44px; padding: 0.5rem 0.75rem; cursor: pointer; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  [role="menu"] { display: grid; gap: 0.35rem; }
+  [role="menuitem"] { text-align: left; }
+}
+.sim-menu-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.sim-menu-heading button { display: grid; place-items: center; }
 @media (max-width: 600px) {
   .sim { padding: 0.65rem; }
-  .sim-lab-grid { grid-template-columns: minmax(0, 1fr); }
-  .sim[data-enhanced] .sim-fig { max-height: 27rem; }
-  .sim[data-enhanced][data-compact="true"] .sim-fig { max-height: none; }
+  .sim-primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sim-primary select { width: 100%; }
+  .sim-primary button { justify-content: center; padding-inline: 0.5rem; }
+  .sim-controls button { font-size: 0.85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim * { transition: none !important; animation: none !important; }
 }
 
 .sim-clock {
@@ -2153,3 +2213,149 @@ summary { cursor: pointer; padding-block: var(--space-2); }
 .calc-form details { margin-bottom: 1rem; }
 .calc-form details .presets { margin-top: 0.75rem; }
 .calc-out .bill .total { overflow-wrap: anywhere; }
+
+
+// Responsive editorial scale: 16px on phones, 20px at 1920, 28px at 4K.
+// Rem-based space and SVG canvases grow together; prose keeps a readable measure.
+html { font-size: clamp(16px, 12px + 0.416667vw, 28px); }
+h1 { font-size: clamp(2.3rem, 1.8rem + 2vw, 4.5rem); max-width: 19ch; line-height: 1.06; }
+h2 { font-size: clamp(1.65rem, 1.35rem + 0.7vw, 2.4rem); line-height: 1.16; }
+h3 { font-size: 1.2rem; line-height: 1.3; }
+p { margin-bottom: 1.25rem; }
+.lead { font-size: clamp(1.12rem, 1rem + 0.25vw, 1.35rem); max-width: 62ch; line-height: 1.65; }
+.prose { max-width: 74ch; }
+.prose h3 { margin-top: 2rem; }
+.prose h3:first-child { margin-top: 0; }
+.wrap { padding-inline: clamp(1.1rem, 3vw, 3rem); }
+.wrap-wide { max-width: 112rem; }
+.hero { padding-block: var(--section-space); gap: clamp(2rem, 4vw, 5rem); align-items: center; }
+.hero, .page-head { position: relative; isolation: isolate; }
+.hero::before, .page-head::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse at 90% 20%, var(--accent-soft), transparent 64%);
+}
+.page-head { padding-top: var(--section-space); padding-bottom: 3rem; }
+.section { padding-bottom: var(--section-space); }
+.rail { column-gap: clamp(2rem, 4vw, 5rem); }
+.rail-head p { max-width: 42ch; }
+.ledger { padding: clamp(1.25rem, 2vw, 2rem); border-radius: 1.25rem; }
+.ledger figcaption { line-height: 1.65; }
+.why, .features { gap: 1.5rem; }
+.why li, .features li, .uses li { padding: clamp(1.25rem, 2vw, 2rem); }
+.why h3, .features h2 { font-size: 1.25rem; line-height: 1.35; }
+.uses a { font: inherit; }
+.why p, .features p, .uses p { line-height: 1.75; }
+.stats { gap: 2rem; }
+.stat-n { font-size: clamp(2.5rem, 2rem + 1vw, 3.6rem); }
+.evidence { margin-block: 1.5rem; font-size: 0.9rem; color: var(--muted); }
+.evidence summary { min-height: 44px; display: list-item; padding: 0.75rem 0; color: var(--accent); font-weight: 600; }
+.evidence p, .evidence li { max-width: 80ch; }
+.evidence .notes { padding-left: 1.5rem; }
+.concept-art { display: block; width: 100%; height: auto; overflow: visible; }
+.actor-art { margin-bottom: 1.5rem; }
+.art-lines { fill: none; stroke: var(--accent); stroke-width: 2; }
+.art-card { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1.5; }
+.art-bucket { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+.art-glyph { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.art-label { fill: var(--ink); text-anchor: middle; font: 600 16px var(--sans); }
+.art-detail { fill: var(--muted); text-anchor: middle; font: 14px var(--sans); }
+.art-dot { fill: var(--ok); stroke: var(--surface); stroke-width: 2; }
+.write-visual { padding-bottom: 3rem; }
+.write-path { margin: 0; max-width: 65rem; }
+.write-path figcaption { font-size: 0.9rem; color: var(--muted); max-width: 72ch; }
+// A native disclosure keeps the mobile menu usable without JavaScript.
+.nav { flex-wrap: nowrap; padding-block: 1rem; }
+.nav-links-desktop { flex: 1; justify-content: center; border: 0; order: initial; padding: 0 !important; }
+.nav-menu { display: none; }
+.nav-out { flex-shrink: 0; }
+@media (max-width: 74rem) {
+  .nav { flex-wrap: wrap; }
+  .nav-links-desktop { display: none !important; }
+  .nav-menu { display: block; margin-left: auto; }
+  .nav-menu summary { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; min-height: 44px; border: 1px solid var(--rule); border-radius: var(--radius); list-style: none; }
+  .nav-menu summary::-webkit-details-marker { display: none; }
+  .nav-menu[open] { display: contents; }
+  .nav-menu[open] summary { margin-left: auto; }
+  .nav-menu[open] .nav-links { display: grid !important; width: 100%; order: 4; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; padding-block: 1rem !important; }
+  .nav-menu[open] .nav-links a { min-height: 44px; width: 100%; }
+  .nav-out { margin-left: 0 !important; }
+}
+@media (max-width: 40rem) {
+  .nav-out { display: none !important; }
+  .nav-menu[open] .nav-links { grid-template-columns: minmax(0, 1fr); }
+  .hero { gap: 2rem; }
+  .hero h1 { max-width: 16ch; }
+  .write-path svg { display: none; }
+  .write-path::before { content: "Write locally → Wait for the bucket → Confirm success"; display: block; font-weight: 600; padding: 1.25rem; margin-bottom: 1rem; background: var(--accent-soft); border-radius: var(--radius); }
+}
+// Full-height matrix. Its horizontal viewport never creates a vertical height cap.
+.cmp-table-wrap { overflow-x: auto; overflow-y: auto; max-height: none; }
+.cmp { width: 145rem; }
+.cmp thead th { position: static; }
+.cmp thead th:first-child { position: sticky; left: 0; }
+.cmp caption { max-width: 65ch; }
+.cmp-cards { display: none; }
+#cmp-scroll { display: block; }
+@media (min-width: 2500px) {
+  .cmp { width: 100%; }
+  .cmp-table-wrap { overflow: visible; }
+  .cmp thead th { position: sticky; top: 0; }
+}
+@media (max-width: 1100px) {
+  .cmp-table-wrap, .cmp-desktop, #cmp-scroll { display: none; }
+  .cmp-cards { display: grid; gap: 1rem; }
+  .cmp-project { min-width: 0; background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius); }
+  .cmp-project > summary { padding: 1.25rem; min-height: 44px; font-weight: 650; }
+  .cmp-card-group { padding: 1.25rem; border-top: 1px solid var(--rule); }
+  .cmp-card-group h3 { color: var(--accent); }
+  .cmp-card-group dl { margin: 0; }
+  .cmp-card-group dl > div { padding-block: 1rem; border-bottom: 1px solid var(--rule); }
+  .cmp-card-group dl > div:last-child { border: 0; padding-bottom: 0; }
+  .cmp-card-group dt { font-weight: 650; margin-bottom: 0.5rem; }
+  .cmp-card-group dd { margin: 0; }
+  .cmp-card-group a { display: inline-flex; align-items: center; min-height: 44px; }
+  .cmp-card-group .cmp-note { font-size: 0.95rem; }
+}
+.calc { gap: 2rem; }
+.calc-form, .scale-control, .cost-exclusions, .cost-bucket { padding: 1.5rem; }
+.calc-form input, .calc-form select { min-height: 48px; font-size: 1rem; }
+.calc-form label { margin-top: 1rem; }
+.calc-form legend { margin-bottom: 1rem; }
+.calc details > summary { min-height: 44px; padding-block: 0.75rem; }
+.sim { padding: clamp(0.75rem, 2vw, 2rem); }
+.sim[data-enhanced] {
+  .sim-workspace { grid-template-columns: minmax(0, 1fr) 18rem; gap: 2rem; }
+  .sim-fig { height: auto; overflow: visible; }
+  .sim-fig > svg { height: auto; max-height: none; }
+  .sim-history summary, .sim-settings-panel input { min-height: 44px; }
+}
+@media (max-width: 800px) {
+  .sim[data-enhanced] .sim-workspace { gap: 0; }
+  .sim[data-enhanced] .sim-rail { position: static; }
+  .sim[data-enhanced] .sim-primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sim[data-enhanced] .sim-primary > button, .sim[data-enhanced] .sim-settings summary { font-size: 0.875rem; }
+  .sim-settings { position: relative; }
+  .sim[data-enhanced] .sim-settings-panel { position: static; width: 100%; max-height: none; overflow: visible; }
+  .sim-settings[open] { grid-column: 1 / -1; }
+  .sim[data-enhanced] .sim-feed p { font-size: 0.9rem; }
+}
+.button, .tab-list button, .tabs [role="tab"], .copy-button { min-height: 44px; }
+@media (max-width: 800px) {
+  .features a, .uses a, .next a, .reading-back { min-height: 44px; display: inline-flex; align-items: center; }
+  .calc-out .bill { padding: 1rem; }
+}
+
+// Touch targets include utility controls and disclosures, not just primary actions.
+button, summary, .copy, .sim-lab summary, .raw summary { min-height: 44px; }
+button, .tabs [role="tab"] { min-width: 44px; }
+.cmp-wrap > p { max-width: 80ch; }
+@media (max-width: 40rem) {
+  .actor-art .art-label { font-size: 28px; }
+}
+.write-art-mobile { display: none; }
+@media (max-width: 40rem) {
+  .write-path::before { content: none; }
+  .write-path .write-art-mobile { display: block; max-width: 22rem; margin: 0 auto 1rem; }
+}
+// Keep native form text at least 16px to avoid focus zoom on phones.
+.sim-controls select, .sim-settings-panel select, .saved-controls select { font-size: 1rem; }

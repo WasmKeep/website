@@ -1,5 +1,5 @@
 +++
 title = "Get started"
-description = "Install WasmKeep, scaffold a TypeScript app with a front and a durable counter, then run wasmkeep dev. Manual SDK setup is an alternative."
+description = "Build a local app with a page, an API and a counter that remembers. Install WasmKeep and try the TypeScript starter."
 template = "get-started.html"
 +++

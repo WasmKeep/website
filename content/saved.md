@@ -1,5 +1,5 @@
 +++
 title = "What saved means"
-description = "Scrub a write's timeline, choose when its node crashes, and see what survives in WasmKeep 0.4.2 with plain and durable writes. Planned batching is explained separately."
+description = "See what survives a crash. Compare plain writes with exec-durable and choose a crash moment in the interactive timeline."
 template = "saved.html"
 +++

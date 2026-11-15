@@ -6,13 +6,14 @@
 {%- set blob = config.extra.blob -%}
 <header class="wrap page-head">
   <h1>What would it cost?</h1>
-  <p class="lead">Large write-heavy apps, terabytes of tenant data, and rooms that cannot hibernate can favor WasmKeep. Small apps often favor Cloudflare's free allowances. Compare the workload, the growing fleet, and the bucket bill before deciding.</p>
+  <p class="lead">See how the bill changes as your app grows. Your own servers can be cheaper for some busy apps; small apps may fit Cloudflare’s free allowances.</p>
+  <p class="small"><strong>Not in the bill:</strong> your operations and on-call time, network charges, backups and taxes. WasmKeep is pre-alpha, with no SLA or included edge network. <a href="#out-title">See the trade-offs</a>.</p>
   <p class="small">Prices and allowances checked against the vendors’ own pages on <time datetime="2026-11-15">2026-11-15</time>. Estimates are before tax, with US dollars and euros kept separate. <a href="#prices-title">Sources and purchase conditions</a>.</p>
   <nav class="page-toc" aria-label="On this page"><a href="#calc-title">Calculator</a><a href="#out-title">Excluded costs</a><a href="#assume-title">Assumptions</a><a href="#prices-title">Dated prices</a></nav>
 </header>
 
-<section class="wrap section" aria-labelledby="calc-title">
-  <h2 id="calc-title">Where each wins</h2>
+<section class="wrap wrap-wide section" aria-labelledby="calc-title">
+  <h2 id="calc-title">Find the cost of your workload</h2>
   <noscript><p class="callout warn">The calculator needs JavaScript. The prices and the formulas it uses are listed below the calculator.</p></noscript>
   <div class="calc" id="calc" hidden>
     <form class="calc-form" id="calc-form" aria-labelledby="calc-title">
@@ -103,7 +104,7 @@
         <p class="small" id="scale-help">0.001× to 100×. Traffic, stored data, actors, residency and sockets grow together; servers are resized at every point. Per-event work and busy-actor rate stay fixed.</p>
         <p id="scale-workload" class="small"></p>
         <label class="batch-control" for="in-batched"><input id="in-batched" type="checkbox"> With batched writes (planned, 0.5.0)</label>
-        <p class="small">Cost projection only, not a feature available in 0.4.2. <a href="{{ blob }}/docs/adr/0034-batched-plain-writes.md">ADR 0034</a>.</p>
+        <p class="small">Cost projection only, not a feature available in 0.4.2. <a href="{{ blob }}/docs/adr/0034-batched-plain-writes.md">Read the batching proposal</a>.</p>
       </div>
       <p class="verdict" id="verdict" aria-live="polite"></p>
       <aside class="cost-exclusions" aria-label="Not in the bill">
@@ -122,7 +123,7 @@
           <table><tbody id="self-lines"></tbody></table>
         </div>
       </div>
-      <h3>How the winner changes with size</h3>
+      <h3>See what changes as you grow</h3>
       <p class="small" id="crossings"></p>
       <div id="charts"></div>
       <p class="small">Both axes are logarithmic; US$0 is drawn at the chart floor and reported exactly in the table. Grey dotted means beyond the roughly 60 writes/s carried by the cited three-node soak, even though the estimate buys more servers. Hover or use arrow keys on the chart to read both bills. The table includes the factor where either side wins; all comparisons exclude the costs listed above.</p>
@@ -145,8 +146,8 @@
 <section class="band" aria-labelledby="out-title">
   <div class="wrap rail">
     <div class="rail-head">
-      <h2 id="out-title">What the bill leaves out</h2>
-      <p>The servers' price is the smaller part of running them.</p>
+      <h2 id="out-title">Not in the bill</h2>
+      <p>Budget for the work of running the app, as well as the infrastructure.</p>
     </div>
     <div class="not-in-bill">
       <ul>
@@ -163,18 +164,18 @@
 
 <section class="wrap rail" aria-labelledby="assume-title">
   <div class="rail-head">
-    <h2 id="assume-title">Assumptions</h2>
-    <p>Where a number comes from, and what it is not.</p>
+    <h2 id="assume-title">Evidence and assumptions</h2>
+    <p>How the calculator estimates capacity, storage requests and prices. <a href="{{ docs }}/benchmarks.html">How we measured</a> links the workloads and raw results.</p>
   </div>
   <div class="prose">
     <ul>
-      <li><strong>Fleet sizing is an estimate from soak rates, not measured capacity.</strong> The cited three-node OVHcloud VPS-2 soak acknowledged 643,891 writes in 10,804.524 s: 59.6/s across the cluster, or a derived average of 19.9/s/node (<a href="{{ blob }}/bench/results/2026-11-13-648c2d1-soak-ovh-bhs-3vps-3h.csv">648c2d1 CSV</a>). The 12-hour run carried about 53/s (<a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">b849bfe CSV</a>). Neither saturated a node. We assume linear scaling, the same rate on a CX33, and half on a 2-vCPU VPS; those other VPS types were not soaked.</li>
+      <li><strong>Fleet sizing is an estimate from soak rates, not measured capacity.</strong> The cited three-node OVHcloud VPS-2 soak acknowledged 643,891 writes in 10,804.524 s: 59.6/s across the cluster, or a derived average of 19.9/s/node (<a href="{{ blob }}/bench/results/2026-11-13-648c2d1-soak-ovh-bhs-3vps-3h.csv">Raw test results</a>). The 12-hour run carried about 53/s (<a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">Raw test results</a>). Neither saturated a node. We assume linear scaling, the same rate on a CX33, and half on a 2-vCPU VPS; those other VPS types were not soaked.</li>
       <li><strong>Nodes = max(3, 1 + ceiling of the largest resource requirement).</strong> Requirements are writes/s divided by the node rate, peak resident actors divided by resident slots, sockets divided by 50,000, and stored GB divided by 80% of a node's disk. One spare node is a sizing margin, not a failover guarantee. The model assumes an operator spreads actors evenly; automatic rebalancing at wake-up is <strong>planned for 0.6.0</strong>. CPU, read throughput, event peaks, relay overhead and fan-out can require more nodes. Millions of actors and large fleets have not been measured.</li>
       <li><strong>Resident and socket budgets are limits, not load-test results.</strong> We assume an instance pool of 2,000 on 8 GB plans (as in the <a href="{{ docs }}/benchmarks.html">benchmark configuration</a>) and 1,000 on 4 GB plans; 10% is reserved for front requests, leaving 1,800 or 900 resident actors (<a href="{{ docs }}/concepts.html#the-front">documented pool split</a>). Memory use varies by guest; these settings must fit RAM and the file-descriptor budget. WebSockets have fixed caps of 1,000/actor and 50,000/node (<a href="{{ docs }}/concepts.html#websockets">limits</a>). Disk sizing assumes one evenly distributed copy plus 20% headroom, and does not cover a single oversized tenant or cached copies left after movement.</li>
       <li><strong>About 1.03 bucket PUTs per durable write</strong>, snapshots included, measured in a 12-hour soak (<a href="{{ docs }}/benchmarks.html#three-nodes-against-a-real-bucket">benchmarks</a>). The 0.4.2 model applies it to every writing event, plus a separate idle floor; this deliberately retains the observed overhead and may double-count a small amount of lease traffic. Actual request mix varies.</li>
       <li><strong>The default floor at rest: derived from 0.4.2's documented cadences, not yet re-measured.</strong> Per node in a three-node cluster with one app, no alarms and no idle expiry: ⅓ PUT, 0.1 LIST and 2⅓ GET a second. The lease is one PUT every 3 s; listings are one for nodes every 30 s, three for operator intents every 60 s and one for alarms every 60 s. Heartbeat reads plus <code>control/changed</code>, the deployed version, its tombstone and secrets total seven GETs every 3 s (<a href="{{ blob }}/docs/cluster.md#what-an-idle-cluster-asks-of-the-bucket">documented cadences</a>). For three nodes over 30 days: 2,592,000 PUTs, 777,600 LISTs and 18,144,000 GETs. At the R2 prices below, after its free allowances: US$10.66 in Class A requests plus US$2.93 in Class B, about US$13.60 at fractional rates, or US$16.74 with the model's whole-million billing rounding, before traffic or storage. For N nodes the floor is N/3 PUT/s, N × 0.1 LIST/s and N × (N + 4)/3 GET/s: each node reads every node's heartbeat. The cost of large fleets can therefore grow quadratically on R2. Alarms, control changes, nodes joining and idle expiry add requests.</li>
-      <li><strong>Historical 0.4.1 measurement, not the default model:</strong> 0.334 PUT, 1.10 LIST and 1.33 GET a second per node, measured on three idle VPS for ten minutes (<a href="{{ blob }}/bench/results/2026-11-14-0bf0547-idle-bucket-requests-ovh-bhs-3vps-10min.csv">CSV</a>). The secrets read every 3 s was not counted then; including it gave the old model 1.67 GET a second. Its three-node, 30-day estimate was about 2.6 million PUTs, 8.6 million LISTs and 13 million GETs, with about US$46 in R2 Class A requests before traffic.</li>
-      <li><strong>Planned batching is a projection, disabled by default.</strong> <a href="{{ blob }}/docs/adr/0034-batched-plain-writes.md">ADR 0034</a> proposes one upload in flight per actor. We assume all writes are eligible plain writes, no flush barriers, and evenly paced writing events during each busy period: traffic PUTs = writes × 1.03 / max(1, busy-actor writes/s × 0.057 s). The 57 ms is the <a href="{{ blob }}/bench/results/2026-11-08-82dab617-soak-ovh-bhs-3vps-12h-nodelease.csv">12-hour soak's median</a>, not a guaranteed round trip or batching measurement. Payload caps, snapshots, alarms, explicit durable calls and burst timing can reduce savings. Nodes and idle requests stay unchanged. Plain replies are not durable acknowledgements; unreplicated writes may be lost. Export and online backup are also <strong>planned for 0.5.0</strong>.</li>
+      <li><strong>Historical 0.4.1 measurement, not the default model:</strong> 0.334 PUT, 1.10 LIST and 1.33 GET a second per node, measured on three idle VPS for ten minutes (<a href="{{ blob }}/bench/results/2026-11-14-0bf0547-idle-bucket-requests-ovh-bhs-3vps-10min.csv">Raw test results</a>). The secrets read every 3 s was not counted then; including it gave the old model 1.67 GET a second. Its three-node, 30-day estimate was about 2.6 million PUTs, 8.6 million LISTs and 13 million GETs, with about US$46 in R2 Class A requests before traffic.</li>
+      <li><strong>Planned batching is a projection, disabled by default.</strong> <a href="{{ blob }}/docs/adr/0034-batched-plain-writes.md">ADR 0034</a> proposes one upload in flight per actor. We assume all writes are eligible plain writes, no flush barriers, and evenly paced writing events during each busy period: traffic PUTs = writes × 1.03 / max(1, busy-actor writes/s × 0.057 s). The 57 ms comes from the <a href="{{ blob }}/bench/results/2026-11-08-82dab617-soak-ovh-bhs-3vps-12h-nodelease.csv">twelve-hour test’s median</a>, not a guaranteed round trip or batching measurement. Payload caps, snapshots, alarms, explicit durable calls and burst timing can reduce savings. Nodes and idle requests stay unchanged. Plain replies are not durable acknowledgements; unreplicated writes may be lost. Export and online backup are also <strong>planned for 0.5.0</strong>.</li>
       <li><strong>Cloudflare duration</strong> uses 128 MB (0.128 GB, following the vendor’s billing examples) per active object. Hibernation-eligible idle time is free, even before eviction from memory. Events are assumed uniform across actors: event-count × activity time is capped at actor-count × month, then the always-active fraction is replaced with a full month, avoiding double billing those objects. Real overlapping events and hibernation eligibility change duration. WebSocket opens count as Worker and DO requests; incoming messages count 20:1 as DO requests, without another Worker invocation. Outgoing messages are not charged as requests. <a href="https://developers.cloudflare.com/durable-objects/best-practices/websockets/">WebSocket hibernation and billing</a>.</li>
       <li><strong>Cloudflare Free versus Paid.</strong> Free is modeled only if steady daily usage fits 100k Worker requests (10 ms CPU/request), 100k DO requests, 13k GB-s, 5M rows read, 100k rows written and 5 GB stored. These are daily caps, not a monthly pool; other account usage, peaks and per-object limits can force Paid. Otherwise the US$5 Paid minimum and monthly included allowances apply. No paid allowance is charged twice. Rows must include index updates and scanned rows, not only returned rows. The linked pricing pages were checked on 2026-11-15.</li>
       <li><strong>Cloudflare rounding:</strong> Durable Objects and R2 usage above each allowance is rounded up to the next billable unit; Workers request and CPU charges use fractional millions, as its worked examples do. SQLite rates are verified; the <a href="https://developers.cloudflare.com/changelog/post/2025-12-12-durable-objects-sqlite-storage-billing/">billing announcement</a> still says a January 7, 2026 target start date. The estimate applies the published SQLite charges; an actual account invoice was not checked.</li>

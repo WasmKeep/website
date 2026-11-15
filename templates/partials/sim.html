@@ -1,4 +1,6 @@
 <div class="sim" id="{{ sim_id }}" data-sim>
+    <div class="sim-workspace">
+    <div class="sim-stage">
     <div class="sim-fig">
     <svg viewBox="0 0 760 440" role="img" aria-labelledby="{{ sim_id }}-t {{ sim_id }}-d" xmlns="http://www.w3.org/2000/svg">
       <title id="{{ sim_id }}-t">Three WasmKeep nodes on one bucket</title>
@@ -44,72 +46,59 @@
       <circle class="dg-packet" r="6" cx="-20" cy="-20" data-packet/>
     </svg>
     </div>
-    <div data-controls hidden>
-      <div class="sim-controls sim-primary" data-node-buttons>
-        <button type="button" class="kill" data-kill="a">{{<icon name="x" />}}Kill node a</button>
-        <button type="button" class="kill" data-kill="b">{{<icon name="x" />}}Kill node b</button>
-        <button type="button" class="kill" data-kill="c">{{<icon name="x" />}}Kill node c</button>
-      </div>
-      <div class="sim-controls">
-        <button type="button" data-restart disabled>Restart the dead node</button>
+    <div class="sim-feed" hidden data-feed>
+      <p class="sim-caption" data-caption role="status" aria-live="polite" aria-atomic="true"></p>
+      <p class="sim-clock" data-clock>Quiet and ready.</p>
+      <p class="sim-bucket" data-bucket></p>
+      <p class="sim-trace" data-trace>One request at a time, so you can follow every hop.</p>
+    </div>
+    </div>
+    <div class="sim-rail" data-controls hidden>
+      <div class="sim-controls sim-primary">
+        <button type="button" data-send>Send request</button>
+        <button type="button" data-write>Durable write</button>
         <button type="button" data-pause aria-pressed="false">Pause</button>
-        <button type="button" data-reset>Reset demo</button>
-        <span class="sim-speed">Client-side simulation · 5× faster</span>
+        <details class="sim-settings" data-settings>
+          <summary>Settings</summary>
+          <div class="sim-settings-panel">
+            <label for="{{ sim_id }}-target">Actor</label>
+            <select id="{{ sim_id }}-target" data-target></select>
+            <label for="{{ sim_id }}-mode">Write mode</label>
+            <select id="{{ sim_id }}-mode" data-mode><option value="durable">Durable · save, then answer</option><option value="plain">Plain · answer, then save</option></select>
+            <label for="{{ sim_id }}-speed">Simulation speed</label>
+            <select id="{{ sim_id }}-speed" data-speed><option value="1">1×</option><option value="5" selected>5× · sped up</option><option value="10">10× · sped up</option></select>
+            <label for="{{ sim_id }}-load">Request load <output data-load-label for="{{ sim_id }}-load">Off</output></label>
+            <input id="{{ sim_id }}-load" data-load type="range" min="0" max="3" value="0" step="1" aria-describedby="{{ sim_id }}-traffic-help">
+            <p class="small" id="{{ sim_id }}-traffic-help">Opt-in reads, paced one trace at a time.</p>
+            <div class="sim-controls sim-secondary">
+              <button type="button" data-add-node>Add node</button>
+              <button type="button" data-spawn>Add actor</button>
+              <button type="button" data-reset>Reset demo</button>
+              <button type="button" data-settings-close>Close</button>
+            </div>
+          </div>
+        </details>
       </div>
-      <p class="sim-clock" data-clock tabindex="-1">Ready. Pick a node to kill.</p>
+      <p class="small sim-help" id="{{ sim_id }}-help">Node or actor: tap for actions. Drag actors to move. Keyboard: Tab, Enter, then arrows.</p>
       <p class="sim-stats" data-stats></p>
-      <ol class="sim-log" data-log aria-live="polite" aria-relevant="additions" aria-label="Simulation events" tabindex="0"></ol>
-      <details class="sim-lab">
-        <summary>Explore: nodes, actors &amp; traffic</summary>
-        <div class="sim-lab-grid">
-          <fieldset>
-            <legend>Traffic &amp; durability</legend>
-            <label for="{{ sim_id }}-load">Request load <output data-load-label for="{{ sim_id }}-load">1 / simulated s</output></label>
-            <input id="{{ sim_id }}-load" data-load type="range" min="0" max="12" value="1" step="1" aria-describedby="{{ sim_id }}-traffic-help">
-            <p class="small" id="{{ sim_id }}-traffic-help">Illustrative traffic: two bodyless reads per write. Dots follow requests; amber waits, red gets 503. Read probes continue through a kill at zero load.</p>
-            <div class="sim-controls">
-              <label for="{{ sim_id }}-mode">New writes</label>
-              <select id="{{ sim_id }}-mode" data-mode><option value="durable">Durable</option><option value="plain">Plain</option></select>
-            </div>
-            <p class="small">Durable: acknowledged after upload. Plain: acknowledged locally and can be lost before upload. The demo stretches that window to make it visible; it is not a measured latency or loss rate.</p>
-            <div class="sim-controls">
-              <label for="{{ sim_id }}-timing">Next kill</label>
-              <select id="{{ sim_id }}-timing" data-timing><option value="median">Median · 17.4 s</option><option value="p99">p99 · 22.5 s</option></select>
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend>Nodes</legend>
-            <div class="sim-controls">
-              <button type="button" data-add-node>Add a node</button>
-              <label for="{{ sim_id }}-remove-node">Node</label>
-              <select id="{{ sim_id }}-remove-node" data-remove-node></select>
-              <button type="button" data-drain>Drain &amp; remove</button>
-            </div>
-            <p class="small">Up to five nodes here. Adding one does not move resident actors. Removal drains and uploads first, hands actors over, then stops the empty node.</p>
-          </fieldset>
-          <fieldset class="sim-actor-tools">
-            <legend>Actors <span data-actor-count>6 / 30</span></legend>
-            <div class="sim-controls">
-              <button type="button" data-spawn>Spawn an actor</button>
-              <label for="{{ sim_id }}-target">Actor</label>
-              <select id="{{ sim_id }}-target" data-target></select>
-              <button type="button" data-read>Send read / wake</button>
-              <button type="button" data-write>Send write</button>
-            </div>
-            <p class="sim-inspect" data-inspect aria-live="off"></p>
-            <div class="sim-controls">
-              <label for="{{ sim_id }}-destination">Move to</label>
-              <select id="{{ sim_id }}-destination" data-destination></select>
-              <button type="button" data-move>Move actor</button>
-              <button type="button" data-idle>Let it idle</button>
-              <button type="button" data-delete>Delete actor</button>
-            </div>
-            <p class="small">Idle for 30 simulated seconds to hibernate (6 seconds here). Send read wakes it on the first node to claim it, with its saved database. A move is not a pin. Delete ends the actor and erases its history; the next request creates it empty.</p>
-          </fieldset>
+      <details class="sim-history"><summary>Event history</summary><ol class="sim-log" data-log aria-label="Simulation event history" tabindex="0"></ol></details>
+      <p class="sr-only" data-live role="status" aria-live="polite" aria-atomic="true"></p>
+      <dialog class="sim-menu" data-menu aria-labelledby="{{ sim_id }}-menu-title">
+        <div class="sim-menu-heading">
+          <strong id="{{ sim_id }}-menu-title" data-menu-title></strong>
+          <button type="button" data-close aria-label="Close menu">{{<icon name="x" />}}</button>
         </div>
-        <p class="small">During failover, eligible bodyless GET/HEAD requests and WebSocket upgrades can wait (25 s default, with caps). Writes and the first requests that discover the failure get <code>503</code>, <code>Retry-After: 1</code>. A 503 does not prove a write never ran. This demo uses safe read probes and does not retry writes. <a href="{{ config.extra.blob }}/docs/cluster.md#when-a-node-dies-what-a-caller-sees">0.4.2 request rules</a>.</p>
+        <p class="small" data-menu-info></p>
+        <div role="menu" data-menu-items></div>
+      </dialog>
+    </div>
+    </div>
+      <details class="sim-lab">
+        <summary>How to read this illustration</summary>
+        <p class="small">Use an actor’s menu for durable or plain writes. Durable: upload to the bucket, then answer. Plain: answer, then upload; a crash can lose that write. The upload window and packet hops are stretched to make the order visible.</p>
+        <p class="small">Sleep illustrates 30 seconds idle (6 seconds at the default 5× speed). Other actors stay put until you act. A sleeping actor wakes where the request lands, first to claim, unless an existing hold (such as open WebSockets) names an owner. A move is not a pin. Remove drains and stops a live node; drain alone keeps it forwarding. This demo has a limit of five nodes and 30 actors.</p>
+        <p class="small">During takeover, eligible bodyless GET/HEAD requests and WebSocket upgrades can wait (25 s default, with caps). Writes and the first requests that discover the failure get <code>503</code>, <code>Retry-After: 1</code>. A 503 does not prove a write never ran. Nothing is automatically retried here. <a href="{{ config.extra.blob }}/docs/cluster.md#when-a-node-dies-what-a-caller-sees">0.4.2 request rules</a>.</p>
         <p class="small"><strong>Planned, not simulated:</strong> export and backup (0.5.0); rebalancing at wake-up (0.6.0).</p>
       </details>
-    </div>
-    <p class="sim-note">WasmKeep 0.4.2 soak: three VPS next to the bucket, 2 hours, 39 kills, 1,264 takeovers. Writable again: <strong>17.4 s median · 22.5 s p99</strong> (29.0 s worst). Zero acknowledged durable writes lost; one plain write lost out of 202,535. <a href="{{ config.extra.blob }}/bench/results/2026-11-14-563cb94-soak-ovh-bhs-3vps-2h-0.4.2-rc.csv">Measured CSV</a>. The demo uses those total-time targets at 5× speed, with a schematic 10 s lease, 5 s grace and restore. It is not a replay or a performance prediction; traffic, upload and hand-over durations are illustrative.</p>
+    <details class="evidence"><summary>How this illustration relates to crash tests</summary><p class="sim-note">WasmKeep 0.4.2 soak: three VPS next to the bucket, 2 hours, 39 kills, 1,264 takeovers. Writable again: <strong>17.4 s median · 22.5 s p99</strong> (29.0 s worst). Zero acknowledged durable writes lost; one plain write lost out of 202,535. <a href="{{ config.extra.docs }}/benchmarks.html#three-nodes-against-a-real-bucket">How we measured</a>. </p><p class="sim-note">This is an illustration, not a replay or performance prediction: a schematic 10 s lease and 5 s grace run at 5× speed by default. After expiry, this illustration spreads recovery claims across live nodes and restores their actors. In a real cluster, requests and alarms trigger those claims; this is not automatic rebalancing. Packet, upload and hand-over durations are illustrative and deliberately slowed for readability.</p></details>
   </div>

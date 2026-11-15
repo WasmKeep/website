@@ -4,9 +4,9 @@
 {%- set blob = config.extra.blob -%}
 <section class="hero wrap" aria-labelledby="hero-title">
   <div class="hero-text">
-    <h1 id="hero-title">Stateful WASI 0.2 actors, on servers you own.</h1>
-    <p class="lead">WasmKeep runs one small program per room, user, tenant or device. Each actor is a WebAssembly component with its own SQLite database. It handles one event at a time and replicates its database to your bucket.</p>
-    <p class="status">{{<icon name="alert" />}}<span><strong>Pre-alpha, {{ config.extra.release }}.</strong> Soaked with nodes killed under load, but not yet carrying real users' traffic. Do not trust it with data you care about yet. <a href="{{ config.extra.docs }}/overview.html">What works today</a>.</span></p>
+    <h1 id="hero-title">Build rooms, agents and apps that remember.</h1>
+    <p class="lead">Give every room, user or device its own small program and database. Run it on your servers, keep its data in your bucket, and let WasmKeep handle the work of moving it after a crash.</p>
+    <p class="status">{{<icon name="alert" />}}<span><strong>Pre-alpha, {{ config.extra.release }}.</strong> For experiments and staging, not production or irreplaceable data. <a href="{{ config.extra.docs }}/overview.html">What works today</a>.</span></p>
     <p class="actions">
       <a class="button primary" href="/how-it-works/">{{<icon name="arrow" />}}<span>How it works</span></a>
       <a class="button" href="/get-started/">{{<icon name="terminal" />}}<span>Get started</span></a>
@@ -20,6 +20,7 @@
   </div>
 
   <figure class="ledger" aria-labelledby="ledger-cap">
+    {% include "partials/actor-visual.html" %}
     <ol class="ledger-list">
       <li><code class="addr"><span class="addr-class">room</span>/lobby-42</code><span class="ledger-db">{{<icon name="database" />}}its own SQLite</span><span class="ledger-what">members, recent messages, open sockets</span></li>
       <li><code class="addr"><span class="addr-class">user</span>/ada</code><span class="ledger-db">{{<icon name="database" />}}its own SQLite</span><span class="ledger-what">session, cart, settings</span></li>
@@ -27,41 +28,41 @@
       <li><code class="addr"><span class="addr-class">device</span>/th-0193</code><span class="ledger-db">{{<icon name="database" />}}its own SQLite</span><span class="ledger-what">last readings, an alarm every minute</span></li>
     </ol>
     <div class="ledger-bucket">{{<icon name="bucket" />}}<span>Replicated to your S3-compatible bucket</span></div>
-    <figcaption id="ledger-cap">One actor per room, user, tenant or device. An address is a class and a name; each name is its own actor, with its own database, running one event at a time. Idle actors leave memory and wake on their next event.</figcaption>
+    <figcaption id="ledger-cap">Each actor keeps its own data and handles one event at a time. Idle actors leave memory until they are needed again.</figcaption>
   </figure>
 </section>
 
 <section class="band" aria-labelledby="why-title">
   <div class="wrap rail">
     <div class="rail-head">
-      <h2 id="why-title">Why WasmKeep</h2>
-      <p>One actor per piece of state, with the runtime on your servers and the data in your bucket.</p>
+      <h2 id="why-title">Your app. Your servers. Your data.</h2>
+      <p>Keep each part of your app together: its data, messages and reminders. Run one binary per server, with a shared bucket for recovery.</p>
       <p><a href="/compare/">How it compares, and when to pick something else</a></p>
     </div>
     <ul class="why">
       <li>
-        <h3>{{<icon name="server" />}}Your servers, an S3-compatible bucket</h3>
+        <h3>{{<icon name="server" />}}Fewer services to run</h3>
         <p>One binary per node; nodes share a bucket you own. Soaked against Cloudflare R2 and OVHcloud Object Storage with nodes killed under load.</p>
       </li>
       <li>
-        <h3>{{<icon name="languages" />}}Languages that build WASI 0.2 components</h3>
-        <p>Actors implement WasmKeep's interfaces as WASI 0.2 components; SDK features vary by language. Rust, Zig and C cost about the same per request: 104, 107 and 110 µs of server CPU on one workstation.<a class="fn" href="#n3" aria-label="Source 3">3</a></p>
+        <h3>{{<icon name="languages" />}}Choose a language that fits</h3>
+        <p>Use Rust, TypeScript, Python and more. SDK support varies by language. In one workstation test, Rust, Zig and C used similar CPU time per request.<a class="fn" href="#n3" aria-label="Source 3">3</a></p>
       </li>
       <li>
-        <h3>{{<icon name="cloud" />}}Durable writes acknowledged once in the bucket</h3>
+        <h3>{{<icon name="cloud" />}}Keep confirmed writes after a crash</h3>
         <p>A write made with <code>exec-durable</code> answers after the bucket holds it, so it survives its node: no acknowledged durable writes lost over 239 kills in 12 hours.<a class="fn" href="#n1" aria-label="Source 1">1</a> Plain writes may lose the latest events on a crash.</p>
       </li>
       <li>
         <h3>{{<icon name="check" />}}Apache-2.0, developed in the open</h3>
-        <p>Published benchmarks link to raw CSVs, including runs that failed a check. Pull requests are welcome, under a CLA.</p>
+        <p>Inspect the code and the published results, including tests that failed. Contributions are welcome under a CLA.</p>
       </li>
     </ul>
   </div>
 </section>
 
-<section class="wrap section demo" aria-labelledby="demo-title">
-  <h2 id="demo-title">Kill a node and watch the takeover</h2>
-  <p class="small">Three nodes, six actors, one bucket: a model of the default timings, five times faster than real time. <a href="/how-it-works/">How it works</a> explains each step.</p>
+<section class="wrap wrap-wide section demo" aria-labelledby="demo-title">
+  <h2 id="demo-title">See your app recover from a crash</h2>
+  <p class="small">Take a server offline and follow its actors to a surviving server. This illustration uses accelerated timings; it is not a live cluster. <a href="/how-it-works/">Follow the recovery</a>.</p>
   {% set sim_id = "home-sim" %}{% include "partials/sim.html" %}
   <p class="saved-invite"><a href="/saved/">What saved means</a>: scrub a write's timeline, choose a crash moment, and see which writes survive.</p>
 </section>
@@ -69,9 +70,9 @@
 <section class="band" aria-labelledby="code-title">
   <div class="wrap rail">
     <div class="rail-head">
-      <h2 id="code-title">One counter, six languages</h2>
-      <p>The counter from the repository's examples, written six ways. Each builds a WASI 0.2 component for WasmKeep’s interfaces. SDK features vary by language; the comments explain write durability.</p>
-      <p class="small">Excerpts of <code>examples/</code> at v{{ config.extra.release }}, each built in CI. D, MoonBit and C# counters exist too (experimental). <a href="{{ config.extra.docs }}/languages.html">Languages</a> has the trade-offs, with numbers.</p>
+      <h2 id="code-title">Start with a language you know</h2>
+      <p>See how a small counter remembers its value across requests. Choose a language below to explore its code and write behavior.</p>
+      <p class="small">Release {{ config.extra.release }} examples, each built in CI. D, MoonBit and C# counters exist too (experimental). <a href="{{ config.extra.docs }}/languages.html">Languages</a> has the trade-offs, with numbers.</p>
     </div>
     <div class="tabs" data-tabs>
       {%- set langs = [
@@ -86,7 +87,7 @@
       <section class="tab-panel" id="code-{{ l[0] }}" data-tab-label="{{ l[1] }}" aria-labelledby="code-{{ l[0] }}-h">
         <h3 class="tab-h" id="code-{{ l[0] }}-h">{{ l[1] }}</h3>
         <pre class="code" tabindex="0"><code>{% if l[0] == "rust" %}{% include "partials/code-rust.html" %}{% elif l[0] == "typescript" %}{% include "partials/code-typescript.html" %}{% elif l[0] == "python" %}{% include "partials/code-python.html" %}{% elif l[0] == "go" %}{% include "partials/code-go.html" %}{% elif l[0] == "zig" %}{% include "partials/code-zig.html" %}{% else %}{% include "partials/code-c.html" %}{% endif %}</code></pre>
-        <p class="tab-meta"><span><code>{{ l[3] }}</code></span><a href="{{ tree }}/examples/{{ l[2] }}">examples/{{ l[2] }}</a></p>
+        <p class="tab-meta"><span><code>{{ l[3] }}</code></span><a href="{{ tree }}/examples/{{ l[2] }}">Complete example</a></p>
       </section>
       {%- endfor %}
     </div>
@@ -95,8 +96,8 @@
 
 <section id="wall" class="wrap rail wall" aria-labelledby="wall-title">
   <div class="rail-head">
-    <h2 id="wall-title">Try it: a live actor</h2>
-    <p>Each available tile calls a counter actor from the examples, one actor named <code>wall</code> per language class. Add one, and the count is written to that actor's own SQLite database.</p>
+    <h2 id="wall-title">Give a counter something to remember</h2>
+    <p>Tap an available language to add one. Each counter keeps its own value in its own database. Run this site locally to try it.</p>
     <p class="small">This app uses the signed Rust, TypeScript, Python, Go (TinyGo), C and Zig counters from 0.4.2. D, MoonBit and C# are not enabled. The site is not deployed yet; run it locally to try the wall.</p>
   </div>
   <div class="wall-body">
@@ -129,9 +130,9 @@
 <section class="band" aria-labelledby="numbers-title">
   <div class="wrap rail">
     <div class="rail-head">
-      <h2 id="numbers-title">Measured, with the raw files</h2>
-      <p>These measurements come from the raw CSVs linked below. Each describes a specific workload and machine, not a performance guarantee.</p>
-      <p class="small"><a href="{{ config.extra.docs }}/benchmarks.html#three-nodes-against-a-real-bucket">Three nodes against a real bucket</a> describes the soaks; the harness is <a href="{{ blob }}/crates/wasmkeep-cli/tests/soak.rs">soak.rs</a>.</p>
+      <h2 id="numbers-title">Recovery you can inspect</h2>
+      <p>In crash tests, confirmed durable writes survived the loss of their server. Recovery took seconds. These results describe tested workloads, not a guarantee for your app.</p>
+      <p class="small"><a href="#home-evidence">How we measured</a>: machines, workloads and raw results.</p>
     </div>
     <div>
       <ul class="stats">
@@ -140,19 +141,19 @@
         <li><span class="stat-n">81 ms</span><span class="stat-l">median durable write as a client sees it, next to the bucket, under load</span><a class="fn" href="#n2" aria-label="Source 2">2</a></li>
         <li><span class="stat-n">61 µs</span><span class="stat-l">median read of a resident Rust actor; 250 KB of memory per resident actor</span><a class="fn" href="#n3" aria-label="Source 3">3</a></li>
       </ul>
-      <ol class="notes">
-        <li id="n1">Three OVHcloud VPS next to OVHcloud Object Storage, a node killed every 3 minutes for 12 hours, every acknowledged write read back: <a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv</a>. Worst time to writable again in that run: 33.7 s. Durable writes only: plain writes, which answer before the upload, may be lost with their node, and a 3-hour run lost 2 (<a href="{{ blob }}/bench/results/2026-11-13-648c2d1-soak-ovh-bhs-3vps-3h.csv">648c2d1</a>). The files' write errors are attempts that got no acknowledgement (an error or no answer, as while a node is down); only acknowledged writes are checked and counted.</li>
-        <li id="n2">The 0.4.2 release candidate, the same three VPS, 2 hours, 39 kills, 1,264 actors taken over, worst 29.0 s: <a href="{{ blob }}/bench/results/2026-11-14-563cb94-soak-ovh-bhs-3vps-2h-0.4.2-rc.csv">2026-11-14-563cb94-soak-ovh-bhs-3vps-2h-0.4.2-rc.csv</a>. Durable write p99: 1.02 s.</li>
-        <li id="n3">A 16-core workstation, data on tmpfs, eight clients: <a href="{{ blob }}/bench/results/2026-11-06-351ea57.csv">2026-11-06-351ea57.csv</a>. The machine changes the answer; read it as an order of magnitude.</li>
-      </ol>
+      <details class="evidence" id="home-evidence"><summary>How we measured</summary><p class="small"><a href="{{ config.extra.docs }}/benchmarks.html">Benchmark methods and results</a>. Each figure above refers to a test below.</p><ol class="notes">
+        <li id="n1">Three OVHcloud VPS next to OVHcloud Object Storage, a node killed every 3 minutes for 12 hours, every acknowledged write read back: <a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">Raw test results</a>. Worst time to writable again in that run: 33.7 s. Durable writes only: plain writes, which answer before the upload, may be lost with their node, and a 3-hour run lost 2 (<a href="{{ blob }}/bench/results/2026-11-13-648c2d1-soak-ovh-bhs-3vps-3h.csv">Raw test results</a>). The files' write errors are attempts that got no acknowledgement (an error or no answer, as while a node is down); only acknowledged writes are checked and counted.</li>
+        <li id="n2">The 0.4.2 release candidate, the same three VPS, 2 hours, 39 kills, 1,264 actors taken over, worst 29.0 s: <a href="{{ blob }}/bench/results/2026-11-14-563cb94-soak-ovh-bhs-3vps-2h-0.4.2-rc.csv">Raw test results</a>. Durable write p99: 1.02 s.</li>
+        <li id="n3">A 16-core workstation, data on tmpfs, eight clients: <a href="{{ blob }}/bench/results/2026-11-06-351ea57.csv">Raw test results</a>. The machine changes the answer; read it as an order of magnitude.</li>
+      </ol></details>
     </div>
   </div>
 </section>
 
 <section class="wrap rail" aria-labelledby="bucket-title">
   <div class="rail-head">
-    <h2 id="bucket-title">Your bucket</h2>
-    <p>Everything a cluster shares lives in one bucket, through the S3 API. Every node checks at start that the bucket refuses a stale conditional write, and stays not ready if it does not.</p>
+    <h2 id="bucket-title">Keep your data in your bucket</h2>
+    <p>Choose where your app stores its recovery data. Your servers share an S3-compatible bucket; WasmKeep checks that it supports the writes needed to keep a single owner for each actor.</p>
     <p class="small"><a href="{{ config.extra.docs }}/deploy/buckets.html">Buckets</a> lists what WasmKeep needs from one, and how to check yours.</p>
   </div>
   <dl class="buckets">
@@ -181,40 +182,40 @@
 
 <section class="wrap rail" aria-labelledby="uses-title">
   <div class="rail-head">
-    <h2 id="uses-title">What people build with actors</h2>
-    <p>Many small, independent pieces of state, each with a modest stream of events, often with WebSockets or timers. Keep Postgres for what spans everything.</p>
+    <h2 id="uses-title">What you can build</h2>
+    <p>Build around a room, a customer or a device. Keep its activity and data together, while other actors work independently. Use a shared database for reporting across the whole app.</p>
     <p class="small"><a href="{{ config.extra.docs }}/use-cases.html">Use cases</a> compares each one with stateless servers, Postgres and Valkey.</p>
   </div>
   <ul class="uses">
     <li>
       <h3>{{<icon name="chat" />}}Rooms and presence</h3>
       <p>One actor per room: its sockets, members and the order of its messages in one place. Sockets stay open while it sleeps.</p>
-      <a href="{{ tree }}/examples/chat-room">examples/chat-room</a>
+      <a href="{{ tree }}/examples/chat-room">Explore a chat room</a>
     </li>
     <li>
       <h3>{{<icon name="gauge" />}}Rate limits and quotas</h3>
       <p>One actor per API key or tenant handles one event at a time, so the count is exact without a lock.</p>
-      <a href="{{ tree }}/examples/rate-limiter">examples/rate-limiter</a>
+      <a href="{{ tree }}/examples/rate-limiter">Build a rate limiter</a>
     </li>
     <li>
       <h3>{{<icon name="bell" />}}Monitors and reminders</h3>
       <p>An alarm on the actor, delivered at least once, also when its node dies. No cron, job table or lock.</p>
-      <a href="{{ tree }}/examples/watch">examples/watch</a>
+      <a href="{{ tree }}/examples/watch">Build a monitor</a>
     </li>
     <li>
       <h3>{{<icon name="bot" />}}AI agents</h3>
       <p>A conversation is state plus a loop: its history in SQLite, a model over HTTP, a reminder tool on an alarm.</p>
-      <a href="{{ tree }}/examples/agent">examples/agent</a>
+      <a href="{{ tree }}/examples/agent">Explore an agent</a>
     </li>
     <li>
       <h3>{{<icon name="flow" />}}Workflows</h3>
       <p>Durable steps as a library on an ordinary actor, in Rust and TypeScript, with clients in the other SDKs.</p>
-      <a href="{{ tree }}/examples/workflows">examples/workflows</a>
+      <a href="{{ tree }}/examples/workflows">Explore workflows</a>
     </li>
     <li>
       <h3>{{<icon name="window" />}}An app with a front</h3>
       <p>A stateless front serves pages and APIs and calls the actors, as this site's source does.</p>
-      <a href="{{ tree }}/examples/todo-front">examples/todo-front</a>
+      <a href="{{ tree }}/examples/todo-front">Build a complete app</a>
     </li>
   </ul>
 </section>
@@ -222,7 +223,7 @@
 <section class="band band-end" aria-labelledby="next-title">
   <div class="wrap rail">
     <div class="rail-head">
-      <h2 id="next-title">Where to go next</h2>
+      <h2 id="next-title">From the idea to your first app</h2>
       <p>Follow the path from the actor model to durability, alternatives and cost. Then try a local app.</p>
     </div>
     <ul class="next">

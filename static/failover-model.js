@@ -1,294 +1,395 @@
-// WasmKeep 0.4.2 teaching model. No IO, DOM, randomness or wall clock.
-// Contract: docs/cluster.md and docs/concepts.md at v0.4.2.
-// Timing source: bench/results/2026-11-14-563cb94-soak-ovh-bhs-3vps-2h-0.4.2-rc.csv.
-// Only kill-to-writable totals are measured. Intermediate animation durations,
-// traffic, counters and upload windows are deliberately illustrative.
+// Deterministic WasmKeep 0.4.2 teaching model: no DOM, IO or wall clock.
+// docs/cluster.md (ownership, failover waits, moves and drains), docs/concepts.md.
+// Packets and lifecycle operations share one clock. Presentation hops are NOT
+// measured latencies. The scene deliberately idles until the visitor acts.
 (() => {
   "use strict";
-  const TIMING = { median: 17.427065123, p99: 22.470010896 };
   const INITIAL = ["room/42", "user/ada", "tenant/acme", "device/7", "room/9", "user/kim"];
-
+  const HOP = 3; // 0.6 seconds on screen at 5x; deliberately easy to follow
   class Simulation {
     constructor() {
       this.now = 0;
-      this.nodes = ["a", "b", "c"].map(id => ({ id, state: "live", beat: 0 }));
+      this.nodes = ["a", "b", "c"].map(id => ({ id, state: "live" }));
       this.actors = INITIAL.map((id, i) => this.actor(id, this.nodes[Math.floor(i / 2)].id, 3));
       this.events = [];
-      this.packets = [];
-      this.load = 1;
-      this.mode = "durable";
-      this.profile = "median";
+      this.queue = [];
+      this.current = null;
+      this.lastRequest = null;
+      this.load = 0;
       this.traffic = 0;
-      this.cursor = 0;
       this.route = 0;
       this.serial = 0;
       this.nextNode = 3;
       this.nextActor = 1;
-      this.failure = null;
+      this.failures = new Map();
       this.counts = { served: 0, retry: 0, lost: 0 };
     }
     actor(id, node, value = 0) {
-      return { id, node, state: "serving", local: value, saved: value,
-        durable: value, lost: 0, last: this.now, uploadAt: null, waiters: [], pending: [], muted: false };
+      return { id, node, state: "serving", local: value, saved: value, durable: value,
+        lost: 0, hold: null, operation: null };
     }
     live() { return this.nodes.filter(n => n.state === "live"); }
     active() { return this.actors.filter(a => a.state !== "deleted"); }
-    unstable() {
-      return this.nodes.some(n => n.state === "draining") ||
-        this.actors.some(a => ["stranded", "restoring", "moving", "deleting"].includes(a.state));
-    }
-    entry() {
-      const live = this.live();
-      return live[this.route++ % live.length]?.id;
-    }
+    entry() { const nodes = this.live(); return nodes[this.route++ % nodes.length]?.id; }
     say(text) { this.events.push({ time: this.now, text }); }
     takeEvents() { return this.events.splice(0); }
-    takePackets() { return this.packets.splice(0); }
-    waiting() { return this.actors.reduce((n, a) => n + a.waiters.length, 0); }
-
+    unstable() { return this.actors.some(a => a.operation) || this.nodes.some(n => n.state === "draining"); }
+    busy(a) { return this.current?.actor === a && !this.current.finished; }
+    canKill(id) {
+      return this.nodes.some(n => n.id === id && ["live", "draining", "drained"].includes(n.state));
+    }
     addNode() {
-      if (this.nodes.length >= 5 || this.unstable()) return;
+      if (this.nodes.length >= 5) return false;
       const id = String.fromCharCode(97 + this.nextNode++);
-      this.nodes.push({ id, state: "live", beat: this.now });
-      this.say(`Node ${id} joined. Resident actors stay put; new or sleeping actors go to the first request's node.`);
+      this.nodes.push({ id, state: "live" });
+      this.say(`Node ${id} added. Resident actors stay where they are.`);
+      return true;
     }
     spawn() {
-      if (this.active().length >= 30 || !this.live().length) return;
-      // Reuse a deleted tile to keep the diagram bounded; its old address can
-      // still be recreated using Send read before spawning another address.
-      if (this.actors.length >= 30) this.actors.splice(this.actors.findIndex(a => a.state === "deleted"), 1);
+      if (this.active().length >= 30 || !this.live().length) return null;
+      if (this.actors.length >= 30) {
+        const slot = this.actors.findIndex(a => a.state === "deleted" && !this.busy(a) && !this.queue.some(r => r.actor === a));
+        if (slot === -1) return null;
+        this.actors.splice(slot, 1);
+      }
       const a = this.actor(`room/new${this.nextActor++}`, this.entry());
       this.actors.push(a);
-      this.say(`${a.id}: first request created an empty actor on node ${a.node}.`);
+      this.say(`${a.id} created on node ${a.node} with an empty database.`);
       return a;
     }
-    handoff(a, to) {
-      a.state = "moving";
-      a.to = to;
-      a.readyAt = this.now + 3; // illustrative command polling / hand-over
-      a.saved = a.local; // queued events finish and upload before release
-      a.uploadAt = null;
-    }
     move(a, to) {
-      if (!a || !["serving", "sleeping"].includes(a.state) || !this.live().some(n => n.id === to) || a.node === to) return;
-      this.handoff(a, to);
-      this.say(`${a.id}: move to ${to}; finish queued events, upload, release, then restore. A move is not a pin.`);
+      if (!a || a.operation || !["serving", "sleeping"].includes(a.state) || a.node === to || !this.live().some(n => n.id === to)) return false;
+      a.operation = { kind: "move", to, due: null };
+      this.say(`${a.id}: move requested to ${to}. Finish the current event, upload, release, then restore. A move is not a pin.`);
+      return true;
     }
-    drain(id) {
-      const n = this.nodes.find(n => n.id === id);
-      if (!n || n.state !== "live" || this.live().length < 2 || this.unstable()) return;
-      n.state = "draining";
-      this.drainBatch(n);
-      n.removeAt = this.now + 4;
-      this.say(`Node ${id} draining: takes no new actors, still forwards. Queued events upload before hand-over; stop only when empty.`);
-    }
-    drainBatch(n) {
-      const held = this.actors.filter(a => a.node === n.id);
-      const slots = 16 - held.filter(a => a.state === "moving").length;
-      for (const a of held.filter(a => a.state === "serving").slice(0, slots)) this.handoff(a, this.entry());
+    sleep(a) {
+      if (!a || a.operation || a.state !== "serving") return false;
+      a.operation = { kind: "sleep", due: null };
+      this.say(`${a.id}: let it idle for 30 simulated seconds (6 seconds at the default 5× speed), then hibernate. No automatic idle timer runs elsewhere in this teaching scene.`);
+      return true;
     }
     deleteActor(a) {
-      if (!a || !["serving", "sleeping"].includes(a.state)) return;
-      a.state = "deleting";
-      a.readyAt = this.now + 3;
-      this.say(`${a.id}: actor delete requested; finish queued events, then record the delete in the bucket.`);
+      if (!a || a.operation || !["serving", "sleeping"].includes(a.state)) return false;
+      a.operation = { kind: "delete", due: null };
+      this.say(`${a.id}: finish its event, record the delete in the bucket, then erase its history.`);
+      return true;
     }
-    idle(a) {
-      if (!a || a.state !== "serving") return;
-      a.muted = true;
-      this.say(`${a.id}: background traffic off for this actor. It hibernates after 30 simulated seconds idle; Send read wakes it.`);
+    drain(id, remove = false) {
+      const n = this.nodes.find(n => n.id === id);
+      if (!n || n.state !== "live" || this.live().length < 2 || this.unstable()) return false;
+      n.state = "draining";
+      n.removeWhenDrained = remove;
+      this.say(`Node ${id} draining: no new claims; finish events and upload before hand-over.`);
+      return true;
+    }
+    remove(id) {
+      const n = this.nodes.find(n => n.id === id);
+      if (!n || this.nodes.length === 1) return false;
+      if (n.state === "live") return this.drain(id, true);
+      if (!["drained", "fenced"].includes(n.state) || this.actors.some(a => a.node === id) || this.current?.via === id) return false;
+      this.nodes.splice(this.nodes.indexOf(n), 1);
+      this.failures.delete(id);
+      this.say(`Node ${id} stopped and removed from this diagram. This does not erase bucket history.`);
+      return true;
     }
     kill(id) {
-      const n = this.nodes.find(n => n.id === id);
-      if (!n || n.state !== "live" || this.live().length < 2 || this.unstable() || this.failure) return;
-      n.state = "dead";
-      // Scenario deliberately kills just after a heartbeat, rather than
-      // suggesting every kill starts a fresh ten-second lease in reality.
-      n.beat = this.now;
-      const affected = this.actors.filter(a => a.node === id);
-      const f = this.failure = { id, at: this.now, duration: TIMING[this.profile],
-        actors: affected.map(a => a.id), phase: "lease", nextProbe: this.now, seen: new Set() };
+      if (!this.canKill(id)) return false;
+      this.nodes.find(n => n.id === id).state = "dead";
+      this.failures.set(id, { id, at: this.now, phase: "lease", seen: new Set() });
       let lost = 0;
-      for (const a of affected) {
-        a.state = "stranded";
-        const delta = a.local - a.saved;
+      for (const a of this.actors.filter(a => a.node === id)) {
+        const plainReplyInFlight = this.current?.actor === a && this.current.method === "POST" && this.current.mode === "plain" && this.current.responseLeftOwner;
+        const delta = a.plainAcknowledged || plainReplyInFlight ? a.local - a.saved : 0;
         a.lost += delta;
         lost += delta;
+        a.plainAcknowledged = false;
         a.local = a.saved;
-        a.uploadAt = null;
+        a.state = "stranded";
+        a.operation = null;
+        a.recover = true;
+        a.hold = null;
+      }
+      // Invalidate the old process now, even if restart is clicked before the
+      // next clock tick. A new process cannot finish the old process's event.
+      const r = this.current;
+      if (r?.via === id && !r.responseLeftIngress) this.retry(r, "entry node killed", true);
+      else if (r?.owner === id) {
+        if (r.acknowledged) { r.steps = []; r.step = null; }
+        else if (!r.responseLeftOwner) this.retry(r, "owner killed before its answer returned");
       }
       this.counts.lost += lost;
-      this.say(`Node ${id} killed just after a heartbeat. ${affected.length} resident actors stranded; other nodes keep serving.`);
-      this.say(lost ? `${lost} acknowledged plain write(s) lost before upload. Acknowledged durable writes remain in the bucket.` : "All acknowledged durable writes survive. No unuploaded plain write was caught in this kill.");
-      if (f.actors.length) this.say("Demo read probes now request each stranded actor once per simulated second, even at zero background load.");
+      this.say(`Node ${id} killed just after a heartbeat. Its actors wait for the lease and grace (15 simulated seconds, sped up).`);
+      this.say(this.live().length ? "No quorum needed: one live node is enough." : "All nodes down: the bucket keeps the data; restart one.");
+      if (lost) this.say(`${lost} unuploaded plain write(s) lost. Acknowledged durable writes remain in the bucket.`);
+      return true;
     }
-    restart() {
-      const f = this.failure;
-      if (!f || f.phase !== "done") return;
-      const n = this.nodes.find(n => n.id === f.id);
+    restart(id = this.nodes.find(n => ["dead", "fenced"].includes(n.state))?.id) {
+      const n = this.nodes.find(n => n.id === id);
+      if (!n || !["dead", "fenced"].includes(n.state)) return false;
       n.state = "live";
-      n.beat = this.now;
-      this.failure = null;
-      this.say(`Node ${n.id} restarted empty. It can claim new or sleeping actors; it does not take resident actors back.`);
+      if (this.failures.get(id)?.phase === "done") this.failures.delete(id);
+      this.say(`Node ${id} restarted. Recover affected actors from the bucket after their old leases expire; resident actors stay put.`);
+      this.recoverActors();
+      return true;
     }
 
-    // Reads are bodyless GETs. Writes are synthetic counter increments (POST).
-    // Discovery failures get 503; only subsequent eligible reads wait. No write
-    // is silently retried. The demo's probes are safe reads.
-    request(a, method = "GET", manual = false, via = this.entry(), writeMode = this.mode) {
-      if (!a || !via) return;
-      if (manual) a.muted = false;
-      const reply = text => { if (manual) this.say(`${method} ${a.id} via ${via}: ${text}`); };
-      const packet = { actor: a.id, via, result: "ok" };
-      this.packets.push(packet);
-      const retry = reason => {
-        packet.result = "retry";
-        this.counts.retry++;
-        reply(`503, Retry-After: 1 — ${reason}. The demo does not retry writes.`);
-      };
-      if (["moving", "deleting"].includes(a.state)) return retry("hand-over or deletion in progress");
+    // Each click is retained. Requests are illustrated one at a time so paths
+    // remain legible; this is presentation pacing, not cluster throughput.
+    request(a, method = "GET", via = null, mode = "durable") {
+      if (!a) return null;
+      const r = { id: ++this.serial, actor: a, method, mode, requestedVia: via,
+        steps: [], history: [], step: null, reply: null, acknowledged: false, finished: false };
+      this.queue.push(r);
+      this.say(`Request ${r.id}: ${method} ${a.id}${method === "POST" ? ` (${mode})` : ""}${this.current ? " queued for the next trace" : ""}.`);
+      this.startNext();
+      return r;
+    }
+    startNext() {
+      if (this.current || !this.queue.length) return;
+      const r = this.current = this.queue.shift();
+      r.via = r.requestedVia || this.entry();
+      this.hop(r, "client", "lb", "request", "Client → load balancer");
+      this.hop(r, "lb", `node:${r.via}`, "request", `Load balancer → node ${r.via}`, () => this.routeRequest(r));
+    }
+    hop(r, from, to, kind, label, done = null, duration = HOP) {
+      r.steps.push({ from, to, kind, label, done, duration, elapsed: 0 });
+    }
+    routeRequest(r) {
+      const a = r.actor;
+      const n = this.nodes.find(n => n.id === r.via);
+      if (!n || !["live", "draining", "drained"].includes(n.state)) return this.retry(r, "entry node unavailable");
+      if (a.operation && !["sleep", "recover"].includes(a.operation.kind)) return this.retry(r, "actor hand-over or deletion in progress");
+      if (a.operation?.kind === "sleep") {
+        a.operation = null;
+        this.say(`${a.id}: request cancels idle sleep.`);
+      }
       if (a.state === "stranded") {
-        const f = this.failure;
-        if (!f.seen.has(via) && this.now - f.at < 10) {
-          f.seen.add(via);
-          return retry("first connection failure discovers the dead owner");
+        const f = this.failures.get(a.node);
+        if (f && this.now - f.at < 10 && !f.seen.has(r.via)) {
+          f.seen.add(r.via);
+          this.hop(r, `node:${r.via}`, `node:${a.node}`, "retry", "Forward attempt: owner is unreachable", () => this.retry(r, "first connection failure discovers the dead owner"));
+          return;
         }
-        if (method !== "GET" || a.waiters.length >= 64) return retry("owner unavailable, or read wait limit reached");
-        a.waiters.push({ until: this.now + 25, manual });
-        packet.result = "wait";
-        reply("kept on this peer (up to 25 s), waiting for ownership to become free");
+        if (r.method !== "GET") return this.retry(r, "owner unavailable; writes are not held or automatically retried");
+        r.waitUntil = this.now + 25;
+        r.waiting = true;
+        this.say(`Request ${r.id} waits at node ${r.via}, up to 25 simulated seconds, for ownership to become free.`);
+        return;
+      }
+      if (a.state === "restoring" && a.operation?.kind === "recover") {
+        r.waitUntil = this.now + 25;
+        r.waiting = true;
         return;
       }
       if (["sleeping", "deleted"].includes(a.state)) {
         const fresh = a.state === "deleted";
-        a.node = via; // first claim, never least-loaded placement
-        a.state = "serving";
-        this.say(`${a.id}: ${fresh ? "new empty actor" : "woke with its saved database"} on node ${via}, first to claim.`);
-      }
-      if (a.state === "restoring") {
-        if (method === "GET") {
-          a.waiters.push({ until: this.now + 30, manual });
-          packet.result = "wait";
-          reply("waiting for the new owner's restore");
-        } else {
-          a.pending.push({ method, manual, via, writeMode });
-          packet.result = "wait";
-          reply("ownership acquired; queued behind the new owner's restore, not yet acknowledged");
-        }
+        // A parked WebSocket ownership record is still a hold. Otherwise the
+        // first node to claim wins; never place on the least-loaded node.
+        const owner = a.hold || (["draining", "drained"].includes(n.state) ? this.entry() : r.via);
+        a.node = owner;
+        a.state = "restoring";
+        r.owner = owner;
+        this.forward(r, () => {
+          this.hop(r, `node:${owner}`, `bucket:${owner}`, "restore", fresh ? "Claim a new actor" : "Claim ownership; read saved history");
+          this.hop(r, `bucket:${owner}`, `node:${owner}`, "restore", "Restore on the owner", () => {
+            a.state = "serving";
+            a.local = a.saved;
+            this.say(`${a.id}: ${fresh ? "created empty" : "awake with saved database"} on node ${owner}${a.hold ? "; existing hold respected" : ", first to claim"}.`);
+            this.deliver(r);
+          });
+        });
         return;
       }
-      // Events serialize: complete the previous event's illustrative upload
-      // before running this one. The model does not benchmark queue latency.
-      if (a.uploadAt !== null) {
-        a.saved = a.local;
-        a.uploadAt = null;
-      }
-      a.last = this.now;
-      this.counts.served++;
-      if (method === "POST") {
-        a.local++;
-        if (writeMode === "durable") {
-          a.saved = a.local;
-          a.durable = a.local;
-          reply(`durable value ${a.local} acknowledged after the bucket has it`);
-        } else {
-          a.uploadAt = this.now + 3;
-          reply(`plain value ${a.local} acknowledged locally; not yet in the bucket. Kill now to catch this illustrative upload window`);
-        }
-      } else reply(`200, value ${a.local}, owner ${a.node}${via !== a.node ? " (one forwarded hop)" : ""}`);
+      r.owner = a.node;
+      this.forward(r, () => this.deliver(r));
     }
-    advance(dt) {
-      this.now += dt;
-      for (const n of this.nodes) {
-        if (["live", "draining"].includes(n.state) && this.now - n.beat >= 3) n.beat = this.now;
+    forward(r, done) {
+      if (r.owner !== r.via) this.hop(r, `node:${r.via}`, `node:${r.owner}`, "request", `Forward once over mTLS: ${r.via} → ${r.owner}`, done);
+      else done();
+    }
+    deliver(r) {
+      this.hop(r, `node:${r.owner}`, `actor:${r.actor.id}`, "request", `${r.actor.id} handles one event`, () => {
+        if (r.method === "POST") {
+          r.actor.local++;
+          if (r.mode === "durable") return this.upload(r, () => {
+            this.hop(r, `storage:${r.owner}`, `actor:${r.actor.id}`, "upload", "Durable commit confirmed to the actor", () => this.answer(r));
+          });
+        }
+        this.answer(r);
+      });
+    }
+    upload(r, done = null) {
+      const a = r.actor;
+      this.hop(r, `actor:${a.id}`, `storage:${r.owner}`, "upload", `Node ${r.owner}: upload the write`);
+      this.hop(r, `storage:${r.owner}`, `bucket:${r.owner}`, "upload", "Owner → bucket: persist SQLite history", () => {
+        a.saved = a.local;
+        a.plainAcknowledged = false;
+        if (r.mode === "durable") a.durable = a.saved;
+      });
+      this.hop(r, `bucket:${r.owner}`, `storage:${r.owner}`, "upload", "Bucket confirms the upload", done);
+    }
+    answer(r) {
+      r.reply = 200;
+      this.hop(r, `actor:${r.actor.id}`, `node:${r.owner}`, "reply", "Actor → owner: answer ready", () => { r.responseLeftOwner = true; });
+      if (r.owner !== r.via) this.hop(r, `node:${r.owner}`, `node:${r.via}`, "reply", "Answer returns through the forwarding node");
+      this.replyToClient(r);
+    }
+    replyToClient(r, fromLB = false) {
+      const kind = r.reply === 503 ? "retry" : "reply";
+      if (!fromLB) this.hop(r, `node:${r.via}`, "lb", kind, `${r.reply} → load balancer`, () => { r.responseLeftIngress = true; });
+      this.hop(r, "lb", "client", kind, `${r.reply} → client`, () => {
+        r.acknowledged = true;
+        this.counts[r.reply === 200 ? "served" : "retry"]++;
+        this.say(`Request ${r.id}: ${r.reply}${r.reply === 503 ? ", Retry-After: 1. No automatic retry; a 503 does not prove a write never ran." : r.method === "POST" ? r.mode === "durable" ? ", durable write acknowledged after bucket confirmation." : ", plain write acknowledged before upload. Kill its owner now to explore that window." : `, ${r.actor.id} answered from node ${r.owner}.`}`);
+        if (r.reply === 200 && r.method === "POST" && r.mode === "plain") {
+          r.actor.plainAcknowledged = true;
+          this.hop(r, `storage:${r.owner}`, `storage:${r.owner}`, "wait", "Plain write answered; upload is still pending", () => this.upload(r), 10);
+        }
+      });
+    }
+    retry(r, reason, fromLB = false) {
+      r.steps = [];
+      r.step = null;
+      r.waiting = false;
+      r.reply = 503;
+      r.owner = null;
+      this.say(`Request ${r.id}: ${reason}.`);
+      this.replyToClient(r, fromLB);
+    }
+    tickRequest(dt) {
+      const r = this.current;
+      if (!r) { this.startNext(); return; }
+      const ingress = this.nodes.find(n => n.id === r.via);
+      if (r.reply !== 503 && !r.responseLeftIngress && (!ingress || !["live", "draining", "drained"].includes(ingress.state))) {
+        this.retry(r, "load balancer cannot reach the entry node", true);
       }
-      const f = this.failure;
-      if (f && f.phase !== "done") {
-        const elapsed = this.now - f.at;
-        if (elapsed >= 10 && f.phase === "lease") {
-          f.phase = "grace";
-          this.say(`Node ${f.id}: 10 s lease expired; 5 s grace protects against overlapping writers.`);
+      const owner = this.nodes.find(n => n.id === r.owner);
+      if (r.owner && (!owner || !["live", "draining", "drained"].includes(owner.state)) && (!r.responseLeftOwner || r.acknowledged)) {
+        if (r.acknowledged) { r.steps = []; r.step = null; }
+        else this.retry(r, "owner died before its answer returned");
+      }
+      if (r.waiting) {
+        if (this.now >= r.waitUntil) this.retry(r, "25 s wait expired");
+        else if (!["stranded", "restoring"].includes(r.actor.state)) { r.waiting = false; this.routeRequest(r); }
+        else return;
+      }
+      if (!r.step) {
+        r.step = r.steps.shift();
+        if (r.step) r.history.push({ from: r.step.from, to: r.step.to, kind: r.step.kind });
+      }
+      if (!r.step) {
+        r.finished = true;
+        this.lastRequest = r;
+        this.current = null;
+        this.startNext();
+        return;
+      }
+      r.step.elapsed += dt;
+      if (r.step.elapsed + 1e-8 >= r.step.duration) {
+        const done = r.step.done;
+        r.step = null;
+        if (done) done();
+      }
+    }
+    tickOperations() {
+      for (const n of [...this.nodes]) {
+        if (n.state === "drained" && n.removeWhenDrained) this.remove(n.id);
+      }
+      for (const n of this.nodes.filter(n => n.state === "draining")) {
+        const held = this.actors.filter(a => a.node === n.id);
+        let slots = 16 - held.filter(a => a.operation?.kind === "move").length;
+        for (const a of held) {
+          if (slots > 0 && !a.operation) { this.move(a, this.entry()); slots--; }
         }
-        if (elapsed >= 15 && f.phase === "grace") {
-          f.phase = "fenced";
-          this.nodes.find(n => n.id === f.id).state = "fenced";
-          this.say(`Peer wrote the fence. Old process cannot renew; ownership is free. The next read probe claims each actor.`);
-        }
-        if (this.now >= f.nextProbe) {
-          f.nextProbe = this.now + 1;
-          for (const id of f.actors) {
-            const a = this.actors.find(a => a.id === id);
-            if (a.state === "stranded" && f.phase === "fenced") {
-              a.node = this.entry();
-              a.state = "restoring";
-              a.readyAt = f.at + f.duration;
-            }
-            if (["stranded", "restoring"].includes(a.state)) this.request(a);
-          }
+        if (!held.length) {
+          n.state = "drained";
+          this.say(`Node ${n.id} drained. It keeps forwarding until stopped.`);
+          if (n.removeWhenDrained) this.remove(n.id);
         }
       }
       for (const a of this.actors) {
-        if (a.uploadAt !== null && this.now >= a.uploadAt && a.state === "serving") {
-          a.saved = a.local;
-          a.uploadAt = null;
+        const op = a.operation;
+        if (!op || (this.busy(a) && op.kind !== "recover")) continue;
+        if (["move", "recover"].includes(op.kind) && !this.live().some(n => n.id === op.to)) {
+          const to = this.entry();
+          if (!to) { a.operation = null; a.recover = true; a.node = null; a.state = "sleeping"; continue; }
+          op.to = to;
         }
-        if (["moving", "deleting", "restoring"].includes(a.state) && this.now >= a.readyAt) {
-          if (a.state === "deleting") {
-            Object.assign(a, { state: "deleted", node: null, local: 0, saved: 0, durable: 0, uploadAt: null, waiters: [] });
-            this.say(`${a.id}: ended; database and alarm gone, older history erased. Send read creates it new.`);
-          } else {
-            if (a.state === "moving") a.node = a.to;
-            a.state = "serving";
-            a.last = this.now;
-            a.local = a.saved;
-            this.say(`${a.id}: ready on ${a.node}, value ${a.local} restored from the bucket.`);
-          }
+        if (op.kind === "recover") {
+          if (this.now < op.due) continue;
+          a.local = a.saved; a.state = "serving"; a.recover = false; a.operation = null;
+          this.say(`${a.id}: restored on node ${a.node}, bucket value ${a.saved}; durable writes intact.`);
+          continue;
         }
-        if (a.state === "serving") {
-          for (const request of a.pending.splice(0)) {
-            this.request(a, request.method, request.manual, request.via, request.writeMode);
-          }
+        if (op.due === null) {
+          op.due = this.now + (op.kind === "sleep" ? 30 : 6);
+          if (op.kind !== "sleep") a.state = op.kind === "move" ? "moving" : "deleting";
         }
-        const remaining = [];
-        for (const waiter of a.waiters) {
-          if (a.state === "serving") {
-            this.counts.served++;
-            a.last = this.now;
-            if (waiter.manual) this.say(`Waiting GET ${a.id}: 200 from node ${a.node}, value ${a.local}.`);
-          } else if (this.now >= waiter.until) {
-            this.counts.retry++;
-            if (waiter.manual) this.say(`Waiting GET ${a.id}: 25 s wait expired; 503, Retry-After: 1.`);
-          } else remaining.push(waiter);
-        }
-        a.waiters = remaining;
-        if (a.state === "serving" && a.uploadAt === null && this.now - a.last >= 30) {
+        if (this.now < op.due) continue;
+        a.saved = a.local;
+        if (op.kind === "move") {
+          a.node = op.to;
+          a.hold = null;
+          a.state = "serving";
+          this.say(`${a.id}: uploaded, released, restored on node ${a.node}.`);
+        } else if (op.kind === "sleep") {
           a.state = "sleeping";
-          a.node = null;
-          this.say(`${a.id}: idle 30 s; hibernated and released ownership. Database stays in the bucket.`);
+          a.node = a.hold;
+          this.say(`${a.id}: asleep; ${a.hold ? `hold stays on ${a.hold}` : "ownership released"}. Its saved database stays in the bucket.`);
+        } else {
+          Object.assign(a, { node: null, hold: null, state: "deleted", local: 0, saved: 0, durable: 0 });
+          this.say(`${a.id}: deleted; history erased. A new request creates it empty.`);
         }
+        a.operation = null;
       }
-      for (const n of [...this.nodes]) {
-        if (n.state === "draining") this.drainBatch(n);
-        if (n.state === "draining" && this.now >= n.removeAt && !this.actors.some(a => a.node === n.id)) {
-          this.nodes.splice(this.nodes.indexOf(n), 1);
-          this.say(`Node ${n.id} drained, then stopped and removed from this diagram. Its actors are safe on the other nodes.`);
+    }
+    recoverActors() {
+      const live = this.live();
+      if (!live.length) return;
+      for (const a of this.actors.filter(a => a.recover && a.state === "sleeping" && !a.operation)) {
+        // Spread the illustration's recovery claims across survivors. This is
+        // not automatic runtime rebalancing: bucket ownership still gates claims.
+        const to = [...live].sort((x, y) =>
+          this.actors.filter(a => a.node === x.id).length - this.actors.filter(a => a.node === y.id).length)[0].id;
+        a.node = to; a.state = "restoring";
+        a.operation = { kind: "recover", to, due: this.now + 6 };
+        this.say(`${a.id}: claim on ${to}; restore saved value ${a.saved} from the bucket.`);
+      }
+    }
+    advance(dt) {
+      // Small deterministic slices also make large test advances safe.
+      while (dt > 1e-8) {
+        const slice = Math.min(dt, 0.05);
+        dt -= slice;
+        this.now += slice;
+        for (const f of this.failures.values()) {
+          if (f.phase === "done") continue;
+          const elapsed = this.now - f.at;
+          if (elapsed + 1e-8 >= 10 && f.phase === "lease") {
+            f.phase = "grace";
+            this.say(`Node ${f.id}: lease expired. Five simulated seconds of grace before fencing.`);
+          }
+          if (elapsed + 1e-8 >= 15 && f.phase === "grace") {
+            f.phase = "done";
+            const n = this.nodes.find(n => n.id === f.id);
+            if (n?.state === "dead") n.state = "fenced";
+            for (const a of this.actors.filter(a => a.node === f.id && a.state === "stranded")) {
+              a.node = null;
+              a.state = "sleeping";
+            }
+            this.say(`Node ${f.id}: lease and grace elapsed. The illustration now claims and restores affected actors across live nodes; no client writes are generated.`);
+          }
         }
-      }
-      if (f && f.phase === "fenced" && f.actors.every(id => !["stranded", "restoring"].includes(this.actors.find(a => a.id === id).state))) {
-        f.phase = "done";
-        this.say(`Takeover complete${f.actors.length ? ` at the ${f.duration.toFixed(1)} s scenario target` : " (no resident actors to restore)"}. Restart node ${f.id} when ready.`);
-      }
-      this.traffic += dt * this.load;
-      while (this.traffic >= 1) {
-        this.traffic--;
-        const candidates = this.active().filter(a => !a.muted && a.state !== "deleting");
-        if (!candidates.length) break;
-        // Shift the first actor each round so writes reach every actor,
-        // while maintaining exactly two generated reads per write.
-        const cursor = this.cursor++;
-        const round = Math.floor(cursor / candidates.length);
-        const a = candidates[(cursor + round) % candidates.length];
-        this.request(a, ++this.serial % 3 === 0 ? "POST" : "GET");
+        this.recoverActors();
+        this.tickRequest(slice);
+        this.tickOperations();
+        this.traffic += slice * this.load;
+        if (this.traffic >= 1) {
+          this.traffic %= 1;
+          // Opt-in reads only, with backpressure to keep the illustration calm.
+          if (!this.current && !this.queue.length) this.request(this.active()[this.serial % this.active().length]);
+        }
       }
     }
   }
