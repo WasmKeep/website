@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 {%- block head %}
-<title>{% block title %}{{ config.title }}: stateful WASI 0.2 actors on servers you own{% endblock title %}</title>
+<title>{% block title %}{{ config.title }}: apps that remember, on servers you own{% endblock title %}</title>
 <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
 {%- endblock head %}
 <link rel="stylesheet" href="{{ get_url(path='style.css', cachebust=true) | replace(from=config.base_url, to='') }}">
@@ -20,11 +20,18 @@
       <svg class="brand-mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="7"/><path d="M7 9l3.5 14L16 12l5.5 11L25 9"/></svg>
       <span>WasmKeep</span>
     </a>
+    <ul class="nav-links nav-links-desktop">
+      {%- for item in config.extra.menu %}
+      <li><a href="{{ item.path }}"{% if (current_path or "") == item.path %} aria-current="page"{% endif %}>{{ item.name }}</a></li>
+      {%- endfor %}
+    </ul>
+    <details class="nav-menu"><summary>Menu <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
     <ul class="nav-links">
       {%- for item in config.extra.menu %}
       <li><a href="{{ item.path }}"{% if (current_path or "") == item.path %} aria-current="page"{% endif %}>{{ item.name }}</a></li>
       {%- endfor %}
     </ul>
+    </details>
     <ul class="nav-out">
       <li><a class="nav-docs" href="{{ config.extra.docs }}">{{<icon name="book" />}}<span>Docs</span></a></li>
       <li><a href="{{ config.extra.github }}">{{<icon name="github" />}}<span>GitHub</span></a></li>
@@ -39,6 +46,7 @@
   <div class="wrap footer-grid">
     <div>
       <p class="footer-brand">WasmKeep</p>
+      <p>Build apps that remember. Keep their data in your bucket.</p>
       <p>Open source under the Apache License 2.0. Pre-alpha {{ config.extra.release }}. Not yet production-ready.</p>
       <p>This site is built as a WasmKeep app (<a href="{{ config.extra.source }}">source</a>). No cookies, no tracking.</p>
     </div>

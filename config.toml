@@ -5,7 +5,7 @@
 # only for the sitemap and canonical links.
 base_url = "https://wasmkeep.dev"
 title = "WasmKeep"
-description = "Stateful actors on your servers, in languages whose toolchains build WASI 0.2 components for WasmKeep's interfaces. SDK features vary by language."
+description = "Build rooms, agents and apps that remember. Run WasmKeep on your servers and keep recovery data in your own bucket. Pre-alpha."
 default_language = "en"
 compile_sass = true
 minify_html = true

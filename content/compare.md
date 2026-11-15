@@ -1,6 +1,6 @@
 +++
 title = "Compare"
-description = "A feature-by-feature matrix of WasmKeep 0.4.2 and eight alternatives: actor model, state, runtime and operations, with explicit roadmap plans and dated first-party sources."
+description = "Compare where your data lives, what survives a crash and who runs the servers. WasmKeep and eight alternatives, with sourced feature details."
 template = "compare.html"
 
 [extra]

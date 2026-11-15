@@ -5,9 +5,9 @@
 {%- set docs = config.extra.docs -%}
 {%- set blob = config.extra.blob -%}
 <header class="wrap page-head">
-  <p class="eyebrow">Model · State · Runtime · Operations</p>
-  <h1>Compare feature by feature</h1>
-  <p class="lead">WasmKeep 0.4.2 and eight alternatives. Start with the state and execution model your application needs, then compare what you will have to operate.</p>
+  <p class="eyebrow">Choose what fits your app</p>
+  <h1>Your app, your trade-offs.</h1>
+  <p class="lead">Decide where your data should live, how writes survive a crash and who runs the servers. Compare WasmKeep with the alternatives, including the reasons to choose something else.</p>
   <nav class="page-toc" aria-label="On this page"><a href="#pick-us-title">Fit</a><a href="#cmp-title">Matrix</a><a href="#picks-title">Alternatives</a><a href="#durable-objects">Durable Objects</a><a href="#celld">celld</a><a href="#src-title">Sources</a></nav>
 </header>
 
@@ -15,13 +15,13 @@
   <h2 id="pick-us-title">Pick WasmKeep when</h2>
   <ul class="why why-4">
     <li><h3>{{<icon name="server" />}}You want to own the deployment</h3><p>One binary per node, on your servers, with replicated state in your S3-compatible bucket.</p></li>
-    <li><h3>{{<icon name="languages" />}}Your actors fit WASI 0.2</h3><p>Run compiled components with private SQLite state. Choose a language by its SDK support, not just whether it compiles.</p></li>
+    <li><h3>{{<icon name="languages" />}}You want a choice of languages</h3><p>Build each actor in a supported language with its own database. Check the SDK features your app needs before choosing.</p></li>
     <li><h3>{{<icon name="cloud" />}}A reply must survive its node</h3><p>In a cluster, <code>exec-durable</code> waits for your bucket before acknowledging. Plain writes have a weaker contract. <a href="/saved/">What saved means</a>.</p></li>
     <li><h3>{{<icon name="check" />}}You can evaluate a young runtime</h3><p>Apache-2.0, open contributions under a CLA, and published benchmark evidence. 0.4.2 is pre-alpha: start with side projects or staging.</p></li>
   </ul>
 </section>
 
-<section class="wrap cmp-wrap" aria-labelledby="cmp-title">
+<section class="wrap wrap-wide cmp-wrap" aria-labelledby="cmp-title">
   <h2 id="cmp-title">The comparison matrix</h2>
   <p id="cmp-verification" class="small">First-party documentation reviewed on <time datetime="{{ page.extra.reviewed }}">{{ page.extra.reviewed }}</time>. Each cell links to its evidence. “Unknown” is limited to behavior the reviewed docs do not establish; it does not mean a feature is absent. This is not a ranking.</p>
   <ul class="cmp-legend" aria-label="Feature status legend">
@@ -32,8 +32,8 @@
     <li>{{<comparison_status value="unknown" />}} <span>Not established by the reviewed docs</span></li>
   </ul>
   <p class="small">For descriptive rows (language, storage, licence), “built” means the documented current arrangement. Read the note; a check is not a quality score. Plans have no promised dates.</p>
-  <nav class="page-toc" aria-label="Matrix row groups">{% for group in page.extra.groups %}<a href="#cmp-{{ group.id }}">{{ group.name }}</a>{% endfor %}</nav>
-  <p class="table-hint small" id="cmp-scroll">Scroll inside the table to compare projects; the feature names stay in view. Keyboard: focus the table, then use the arrow keys. Project headings link to sources.</p>
+  <nav class="page-toc cmp-desktop" aria-label="Matrix row groups">{% for group in page.extra.groups %}<a href="#cmp-{{ group.id }}">{{ group.name }}</a>{% endfor %}</nav>
+  <p class="table-hint small" id="cmp-scroll">Scroll horizontally to compare projects; feature names stay in view. Rows flow with the page. Keyboard: focus the table and use left or right. On phones, open a project card below.</p>
   <div class="cmp-table-wrap" tabindex="0" role="region" aria-labelledby="cmp-title" aria-describedby="cmp-scroll cmp-verification">
     <table class="cmp">
       <caption>Feature availability — WasmKeep {{ page.extra.release }}, reviewed {{ page.extra.reviewed }}; official competitor docs reviewed on the same date</caption>
@@ -50,22 +50,7 @@
           <th scope="row" id="{{ row_id }}">{{ row.name }}</th>
           {% for project in page.extra.projects %}
           <td aria-label="{{ project.name }}, {{ row.name }}: {% if row.cells[project.id] is defined %}{{ row.cells[project.id].status }}{% if row.cells[project.id].release is defined %}, planned {{ row.cells[project.id].release }}{% endif %}. {{ row.cells[project.id].note }}{% else %}unknown; not established by the reviewed docs.{% endif %}" headers="cmp-project-{{ project.id }} cmp-{{ group.id }} {{ row_id }}"{% if project.id == "wasmkeep" %} class="cmp-us"{% endif %}>
-            {% if row.cells[project.id] is defined %}
-              {% set cell = row.cells[project.id] %}
-              {{<comparison_status value={cell.status} />}}
-              {% if cell.release is defined %}<a class="cmp-plan" href="{{ config.extra.github }}/blob/main/ROADMAP.md#{{ cell.roadmap }}">{% if cell.status != "planned" %}Planned {% endif %}{{ cell.release }}</a>{% endif %}
-              <p class="cmp-note">{{ cell.note }}</p>
-              {% if project.id == "wasmkeep" %}
-                {% if "ROADMAP.md" in cell.source %}{% set source_base = config.extra.github ~ "/blob/main" %}{% else %}{% set source_base = blob %}{% endif %}
-                {% set source_url = source_base ~ "/" ~ cell.source %}
-              {% else %}
-                {% set source_url = cell.source %}
-              {% endif %}
-              <a class="cmp-source" href="{{ source_url }}" aria-label="{{ project.name }}: {{ row.name }} source">Source</a>
-            {% else %}
-              {{<comparison_status value="unknown" />}}
-              <span class="cmp-note">Not established by the reviewed docs.</span>
-            {% endif %}
+            {% include "partials/compare-cell.html" %}
           </td>
           {% endfor %}
         </tr>
@@ -73,6 +58,22 @@
       </tbody>
       {% endfor %}
     </table>
+  </div>
+  <div class="cmp-cards" aria-label="Compare by project">
+    <p class="small">Open a project to explore its features. Each note links to its source.</p>
+    {% for project in page.extra.projects %}
+    <details class="cmp-project"{% if project.id == "wasmkeep" %} open{% endif %}>
+      <summary>{{ project.name }}{% if project.id == "wasmkeep" %}<span class="cmp-version">{{ page.extra.release }} · pre-alpha</span>{% endif %}</summary>
+      {% for group in page.extra.groups %}
+      <section class="cmp-card-group" aria-labelledby="card-{{ project.id }}-{{ group.id }}">
+        <h3 id="card-{{ project.id }}-{{ group.id }}">{{ group.name }}</h3>
+        <dl>{% for row in group.rows %}
+          <div><dt>{{ row.name }}</dt><dd>{% include "partials/compare-cell.html" %}</dd></div>
+        {% endfor %}</dl>
+      </section>
+      {% endfor %}
+    </details>
+    {% endfor %}
   </div>
 </section>
 
@@ -122,9 +123,9 @@
 
 <section class="wrap section" id="durable-objects" aria-labelledby="do-title">
   <h2 id="do-title">In detail: Cloudflare Durable Objects</h2>
-  <p>The closest programming model: an addressable object with its own storage, alarms and WebSockets. Do not assume identical scheduling: check the input/output gates and behavior across awaits in Cloudflare’s docs against WasmKeep’s whole-event serialization. Two things carry the name: <strong>workerd</strong>, the open-source runtime, and <strong>Cloudflare Workers</strong>, the hosted platform. The measurements below are historical local runtime comparisons, not measurements of Cloudflare’s managed network or of WasmKeep 0.4.2.</p>
+  <p>Choose Durable Objects when you want a managed service for rooms, users and other small pieces of state.</p><p class="small">The programming model is close: an addressable object with its own storage, alarms and WebSockets. Do not assume identical scheduling: check the input/output gates and behavior across awaits in Cloudflare’s docs against WasmKeep’s whole-event serialization. Two things carry the name: <strong>workerd</strong>, the open-source runtime, and <strong>Cloudflare Workers</strong>, the hosted platform. The measurements below are historical local runtime comparisons, not measurements of Cloudflare’s managed network or of WasmKeep 0.4.2.</p>
   <h3>The same counter in both runtimes</h3>
-  <p class="small">From <a href="{{ docs }}/benchmarks.html#wasmkeep-against-workerd-the-same-counter">WasmKeep against workerd, the same counter</a>: an AMD Ryzen 9 7950X workstation, both runtimes' data on tmpfs, eight clients over loopback, workerd 1.20261016.1 (<a href="{{ blob }}/bench/results/2026-11-06-351ea57.csv">2026-11-06-351ea57.csv</a>).</p>
+  <details class="evidence"><summary>How we measured</summary><p class="small">From <a href="{{ docs }}/benchmarks.html#wasmkeep-against-workerd-the-same-counter">WasmKeep against workerd, the same counter</a>: an AMD Ryzen 9 7950X workstation, both runtimes' data on tmpfs, eight clients over loopback, workerd 1.20261016.1 (<a href="{{ blob }}/bench/results/2026-11-06-351ea57.csv">Raw test results</a>).</p></details>
   <p class="table-hint small">Scroll horizontally to see all columns. With a keyboard, focus the table and use the arrow keys.</p>
   <div class="table-scroll" tabindex="0" role="region" aria-label="Counter runtime measurements">
     <table class="price-table num-table">
@@ -139,7 +140,7 @@
     </table>
   </div>
   <ul class="small">
-    <li>The machine changes the answer: on a shared 4-vCPU VM, WasmKeep with Rust used 215 µs of CPU per request against workerd's 555 µs (<a href="{{ blob }}/bench/results/2026-11-05-ae5416c.csv">2026-11-05-ae5416c.csv</a>).</li>
+    <li>The machine changes the answer: on a shared 4-vCPU VM, WasmKeep with Rust used 215 µs of CPU per request against workerd's 555 µs (<a href="{{ blob }}/bench/results/2026-11-05-ae5416c.csv">Raw test results</a>).</li>
     <li>workerd's throughput is left out: it runs one thread per process by design, so one process is not a fair comparison.</li>
     <li>TypeScript on WasmKeep runs on QuickJS, an interpreter in each actor: about 1.8 times workerd's CPU. JavaScript-heavy code belongs on workerd.</li>
   </ul>
@@ -149,9 +150,9 @@
 <section class="band" id="celld" aria-labelledby="celld-title">
   <div class="wrap section">
   <h2 id="celld-title">In detail: celld</h2>
-  <p>In the measured celld v0.6.3 setup, the same idea was built on the Workers API: Durable Object-style actors on your own servers, each with its own SQLite database, replicated to a bucket. Both ran the same counter on the same machine and the same local bucket. These historical runs predate WasmKeep 0.4.2 and do not verify the latest celld release. celld v0.6.3, five runs of each, medians with the lowest and highest in brackets.</p>
+  <p>Keep existing Workers code on your own servers: that is the main reason to evaluate celld. WasmKeep uses its own API.</p><p class="small">These historical comparisons tested celld v0.6.3 and predate WasmKeep 0.4.2. Both ran the same counter on the same machine and local bucket. Tables show the median of five runs, with the lowest and highest in brackets. They do not verify the latest celld release.</p>
   <h3>One node, every write in the bucket, data on disk</h3>
-  <p class="small">From <a href="{{ docs }}/benchmarks.html#wasmkeep-against-celld-every-write-in-a-bucket">WasmKeep against celld, every write in a bucket</a>: the workstation above, MinIO on loopback with its data on tmpfs, each runtime's data on btrfs on an encrypted NVMe SSD (<a href="{{ blob }}/bench/results/2026-11-11-488369d-bucket-minio-tmpfs-data-disk-r1.csv">…-data-disk-r1.csv</a> to r5).</p>
+  <details class="evidence"><summary>How we measured</summary><p class="small">From <a href="{{ docs }}/benchmarks.html#wasmkeep-against-celld-every-write-in-a-bucket">WasmKeep against celld, every write in a bucket</a>: the workstation above, MinIO on loopback with its data on tmpfs, each runtime's data on btrfs on an encrypted NVMe SSD (<a href="{{ blob }}/bench/results/2026-11-11-488369d-bucket-minio-tmpfs-data-disk-r1.csv">Raw results for five runs</a>).</p></details>
   <p class="table-hint small">Scroll horizontally to see all columns. With a keyboard, focus the table and use the arrow keys.</p>
   <div class="table-scroll" tabindex="0" role="region" aria-label="Single-node bucket measurements">
     <table class="price-table num-table">
@@ -168,7 +169,7 @@
     </table>
   </div>
   <h3>Three nodes, a node killed under writes, data on disk</h3>
-  <p class="small">From <a href="{{ docs }}/benchmarks.html#three-nodes-wasmkeep-against-celld">Three nodes: WasmKeep against celld</a>: three processes of each on the same workstation, the same local MinIO, plain HTTP between nodes (the tested celld v0.6.3 setup had no TLS between peers), default lease timings, each node killed in turn while 90 ledger actors were written (<a href="{{ blob }}/bench/results/2026-11-11-c556110-cluster-minio-tmpfs-nodes-disk-r1.csv">…-nodes-disk-r1.csv</a> to r5). The tested celld "fleet" mode, its default with two or more nodes, answered once a follower has the write on disk; "bucket" waited for the bucket, as WasmKeep’s durable writes do.</p>
+  <details class="evidence"><summary>How we measured</summary><p class="small">From <a href="{{ docs }}/benchmarks.html#three-nodes-wasmkeep-against-celld">Three nodes: WasmKeep against celld</a>: three processes of each on the same workstation, the same local MinIO, plain HTTP between nodes (the tested celld v0.6.3 setup had no TLS between peers), default lease timings, each node killed in turn while 90 ledger actors were written (<a href="{{ blob }}/bench/results/2026-11-11-c556110-cluster-minio-tmpfs-nodes-disk-r1.csv">Raw results for five runs</a>). The tested celld "fleet" mode, its default with two or more nodes, answered once a follower has the write on disk; "bucket" waited for the bucket, as WasmKeep’s durable writes do.</p></details>
   <p class="table-hint small">Scroll horizontally to see all columns. With a keyboard, focus the table and use the arrow keys.</p>
   <div class="table-scroll" tabindex="0" role="region" aria-label="Three-node bucket measurements">
     <table class="price-table num-table">
@@ -194,10 +195,10 @@
 
 <section class="wrap section" aria-labelledby="src-title">
   <div>
-    <h2 id="src-title">Sources</h2>
+    <h2 id="src-title">Evidence</h2>
     <p class="small">WasmKeep: local documentation read on <time datetime="2026-11-15">2026-11-15</time>, with released behavior checked against the 0.4.2 changelog and future work against the current roadmap. Competitors: first-party documentation reviewed on the same date. The matrix links each cell to the relevant page; starting points are collected below. These are documentation checks, not new runtime tests.</p>
     <ul class="sources">
-      <li id="source-wasmkeep"><strong>WasmKeep</strong> — read locally 2026-11-15: <a href="{{ blob }}/README.md">README</a>, <a href="{{ blob }}/CHANGELOG.md#042">0.4.2 changelog</a>, <a href="{{ blob }}/docs/concepts.md">concepts</a>, <a href="{{ blob }}/docs/cluster.md">cluster</a>, <a href="{{ blob }}/docs/failover-and-scaling.md">failover and scaling</a>, <a href="{{ blob }}/docs/deploy/backup-and-restore.md">backup limits</a>, <a href="{{ config.extra.github }}/blob/main/ROADMAP.md">current roadmap</a>. Measurements: <a href="{{ docs }}/benchmarks.html">benchmark methodology</a> and the individual CSVs linked above.</li>
+      <li id="source-wasmkeep"><strong>WasmKeep</strong> — read locally 2026-11-15: <a href="{{ blob }}/README.md">README</a>, <a href="{{ blob }}/CHANGELOG.md#042">0.4.2 changelog</a>, <a href="{{ blob }}/docs/concepts.md">concepts</a>, <a href="{{ blob }}/docs/cluster.md">cluster</a>, <a href="{{ blob }}/docs/failover-and-scaling.md">failover and scaling</a>, <a href="{{ blob }}/docs/deploy/backup-and-restore.md">backup limits</a>, <a href="{{ config.extra.github }}/blob/main/ROADMAP.md">current roadmap</a>. Measurements: <a href="{{ docs }}/benchmarks.html">benchmark methodology</a> with raw results and the conditions of each run.</li>
       <li id="source-cloudflare"><strong>Cloudflare Durable Objects</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://developers.cloudflare.com/durable-objects/">actor model</a>, <a href="https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/">storage</a>, <a href="https://developers.cloudflare.com/durable-objects/best-practices/rules-of-durable-objects/">durability</a>, <a href="https://developers.cloudflare.com/d1/best-practices/import-export-data/">backup limits</a>, <a href="https://developers.cloudflare.com/workflows/">workflows</a>, <a href="https://developers.cloudflare.com/durable-objects/reference/data-location/">placement</a>, <a href="https://github.com/cloudflare/workerd">licence</a>.</li>
       <li id="source-celld"><strong>celld</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://github.com/denoland/celld/blob/main/docs/services/durable-objects.md">actor model</a>, <a href="https://github.com/denoland/celld/blob/main/docs/guarantees.md">backup limits</a>, <a href="https://github.com/denoland/celld/blob/main/docs/services/workflows.md">workflows</a>, <a href="https://github.com/denoland/celld/blob/main/docs/README.md#add-nodes">placement</a>, <a href="https://github.com/denoland/celld/blob/main/LICENSE">licence</a>.</li>
       <li id="source-rivet"><strong>Rivet</strong> — reviewed <time datetime="2026-11-15">2026-11-15</time>: <a href="https://rivet.dev/actors/docs/">actor model</a>, <a href="https://rivet.dev/actors/docs/sqlite/">storage</a>, <a href="https://rivet.dev/docs/deploy/self-host/control-plane/storage/">durability</a>, <a href="https://rivet.dev/docs/deploy/self-host/control-plane/backups/">backup limits</a>, <a href="https://rivet.dev/docs/">workflows</a>, <a href="https://rivet.dev/actors/docs/lifecycle/">placement</a>, <a href="https://github.com/rivet-dev/rivet/blob/main/LICENSE">licence</a>.</li>

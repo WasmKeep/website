@@ -1,0 +1,16 @@
+{% if row.cells[project.id] is defined %}
+              {% set cell = row.cells[project.id] %}
+              {{<comparison_status value={cell.status} />}}
+              {% if cell.release is defined %}<a class="cmp-plan" href="{{ config.extra.github }}/blob/main/ROADMAP.md#{{ cell.roadmap }}">{% if cell.status != "planned" %}Planned {% endif %}{{ cell.release }}</a>{% endif %}
+              <p class="cmp-note">{{ cell.note }}</p>
+              {% if project.id == "wasmkeep" %}
+                {% if "ROADMAP.md" in cell.source %}{% set source_base = config.extra.github ~ "/blob/main" %}{% else %}{% set source_base = blob %}{% endif %}
+                {% set source_url = source_base ~ "/" ~ cell.source %}
+              {% else %}
+                {% set source_url = cell.source %}
+              {% endif %}
+              <a class="cmp-source" href="{{ source_url }}" aria-label="{{ project.name }}: {{ row.name }} source">Source</a>
+            {% else %}
+              {{<comparison_status value="unknown" />}}
+              <span class="cmp-note">Not established by the reviewed docs.</span>
+            {% endif %}

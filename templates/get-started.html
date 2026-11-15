@@ -5,8 +5,9 @@
 {%- set docs = config.extra.docs -%}
 {%- set v = config.extra.release -%}
 <header class="wrap page-head">
-  <h1>Get started</h1>
-  <p class="lead">Scaffold a TypeScript app with a front and a durable counter, then develop it with hot reload. Start locally: {{ config.extra.release }} is pre-alpha and not yet production-ready.</p>
+  <p class="eyebrow">Get started</p>
+  <h1>Build your first app locally.</h1>
+  <p class="lead">Start with a page, an API and a counter that remembers its value. Edit your TypeScript code and see the app rebuild while keeping its data. Release {{ config.extra.release }} is pre-alpha: use it for evaluation, not production.</p>
   <nav class="page-toc" aria-label="On this page"><a href="#install">Install</a><a href="#create">Create an app</a><a href="#sdk">Manual SDK setup</a><a href="#tutorials">Tutorials</a></nav>
 </header>
 <div class="wrap rail rail-rev">
@@ -24,7 +25,7 @@
 cd my-app
 npm install
 wasmkeep dev</code></pre>
-      <p>Open <code>http://127.0.0.1:8080</code>. The scaffold includes a front with a page and an API, an internal <code>counter</code> class, and <code>wasmkeep.toml</code>. Its SDK is pinned to your CLI's version. <code>wasmkeep dev</code> rebuilds on save, keeping the data.</p>
+      <p>Open <code>http://127.0.0.1:8080</code>. The scaffold includes a front with a page and an API, an internal <code>counter</code> class, and <code>wasmkeep.toml</code>.</p><p>Its SDK is pinned to your CLI's version. <code>wasmkeep dev</code> rebuilds on save, keeping the data.</p>
       <p class="small">The scaffold is built into the CLI; installing dependencies needs the network. Rust is also supported with <code>--lang rust</code>. See <a href="{{ docs }}/tutorials/first-actor.html#starting-a-project-with-wasmkeep-new">starting a project</a> for the commands and options.</p>
     </li>
     <li>
@@ -60,12 +61,12 @@ wasmkeep dev</code></pre>
     <div class="callout">
       <h3>See it survive a kill</h3>
       <p>The repository's Compose example runs three nodes on one machine, sharing a MinIO bucket, with mutual TLS between them. Kill the node that runs an actor and another restores it from the bucket.</p>
-      <p><a href="{{ config.extra.tree }}/deploy/compose">deploy/compose</a></p>
+      <p><a href="{{ config.extra.tree }}/deploy/compose">Run the recovery example</a></p>
     </div>
     <div class="callout">
       <h3>This site's source is an example</h3>
       <p>The site is built as a WasmKeep app: a Rust front that serves the pages and calls the language wall's counter actors. The complete app is available in the source repository. It is not deployed yet; run it locally to try the wall.</p>
-      <p><a href="{{ config.extra.source }}">WasmKeep/website</a></p>
+      <p><a href="{{ config.extra.source }}">Explore this app’s source</a></p>
     </div>
     <div class="callout">
       <h3>The documentation</h3>
