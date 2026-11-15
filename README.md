@@ -41,11 +41,10 @@ plain form, so the wall works without JavaScript; `static/wall.js` updates
 it in place when JavaScript runs.
 
 The counters come from the signed assets of the WasmKeep release in
-`WASMKEEP_VERSION`. The 0.4.0 release carries the Rust counter only
-(`counter.wasm`). The others are added when the main repository publishes
-them as release assets: TypeScript, Python, Go, C, Zig, D, MoonBit and C#.
-Until then they show as "soon". A language joins the wall when its class
-is added to `wasmkeep.toml`.
+`WASMKEEP_VERSION`. The 0.4.2 release carries Rust (`counter.wasm`),
+TypeScript, Python, Go (TinyGo), C and Zig counters, each signed and listed
+in `SHA256SUMS`. These six classes are enabled in `wasmkeep.toml`. D,
+MoonBit and C# are not release assets yet and show as "soon".
 
 ## Run it locally
 
@@ -88,7 +87,7 @@ the caching headers and the wall's API; CI runs it with the released CLI.
 3. `wasmkeep dev` (or `wasmkeep deploy`) runs both through the `[front]`
    build command.
 
-Deployed by the maintainers; not from CI.
+Not deployed yet. Deployment is handled by the maintainers; not from CI.
 
 ## License
 

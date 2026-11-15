@@ -6,7 +6,7 @@
 {%- set blob = config.extra.blob -%}
 <header class="wrap page-head">
   <h1>WasmKeep and the alternatives</h1>
-  <p class="lead">Several good tools give each piece of state its own small home. WasmKeep's case is a combination: your servers and your bucket, any language as standard components, and a write that counts only once it is in that bucket. Here is when to pick it, how the others describe themselves, and when to pick them instead.</p>
+  <p class="lead">Several good tools give each piece of state its own small home. WasmKeep's case is a combination: your servers and your bucket, languages whose toolchains build WASI 0.2 components for WasmKeep's interfaces, and acknowledged durable writes (<code>exec-durable</code>) that survive their node. SDK features vary by language; plain writes may lose the latest events on a crash. Here is when to pick it, how the others describe themselves, and when to pick them instead.</p>
   <p class="small">Read on each project's own site or repository on 2026-11-14; sources at the end. A cell says "not stated" where the pages we read do not say. Corrections are welcome as <a href="{{ config.extra.source }}/issues">an issue</a>.</p>
 </header>
 
@@ -23,14 +23,14 @@
     </li>
     <li>
       <h3>{{<icon name="cloud" />}}A write must survive its node</h3>
-      <p><code>exec-durable</code> answers only once the bucket holds the write, on one node or many. 12 hours, 239 kills on three VPS: 2,306,192 acknowledged writes, none lost or applied twice (<a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">CSV</a>).</p>
+      <p><code>exec-durable</code> answers only once the bucket holds the write, on one node or many. 12 hours, 239 kills on three VPS: 2,306,192 acknowledged durable writes, none lost or applied twice (<a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">CSV</a>).</p>
     </li>
     <li>
       <h3>{{<icon name="check" />}}You want to read the evidence</h3>
       <p>Apache-2.0, pull requests welcome under a CLA, and every published number backed by a CSV in <a href="{{ config.extra.tree }}/bench/results">bench/results</a>, including runs that failed a check.</p>
     </li>
   </ul>
-  <p class="small">Accept, today, that it is pre-alpha, runs in one region per cluster, and takes seconds to fail over: 17.6 s at the median and 27.1 s at worst in the 0.4.1 release candidate's 2-hour soak, 33.7 s at worst in the 12-hour soak.</p>
+  <p class="small">Accept, today, that it is pre-alpha, runs in one region per cluster, and takes seconds to fail over: 17.4 s at the median and 29.0 s at worst in the 0.4.2 release candidate's 2-hour soak, 33.7 s at worst in the 12-hour soak.</p>
 </section>
 
 <section class="wrap cmp-wrap" aria-labelledby="cmp-title">
@@ -51,12 +51,12 @@
       <tbody>
         <tr class="us">
           <th scope="row">WasmKeep</th>
-          <td data-label="Model and languages">Actors, one per name, one event at a time. Any WASI 0.2 component: SDKs for Rust, TypeScript, Python, C, Zig, Go (TinyGo); standard Go, D, MoonBit experimental.</td>
+          <td data-label="Model and languages">Actors, one per name, one event at a time. WASI 0.2 components implementing WasmKeep's interfaces; SDK features vary by language. SDKs for Rust, TypeScript, Python, C, Zig, Go (TinyGo); standard Go, D, MoonBit experimental.</td>
           <td data-label="Where state lives">One SQLite database per actor on its node's disk, replicated to your S3-compatible bucket.</td>
-          <td data-label="When a write is acknowledged"><code>exec-durable</code>: once the bucket holds it. Plain <code>exec</code>: once committed locally, uploaded right after the event.</td>
+          <td data-label="When a write is acknowledged"><code>exec-durable</code>: once the bucket holds it. Plain <code>exec</code>: once committed locally, uploaded right after the event; the latest events may be lost on a crash.</td>
           <td data-label="Run it yourself">Yes, only: one binary per node, nodes share a bucket.</td>
           <td data-label="Licence">Apache-2.0</td>
-          <td data-label="Maturity">Pre-alpha, 0.4.1 (pre-release).</td>
+          <td data-label="Maturity">Pre-alpha, {{ config.extra.release }} (pre-release).</td>
         </tr>
         <tr>
           <th scope="row">Cloudflare Durable Objects</th>

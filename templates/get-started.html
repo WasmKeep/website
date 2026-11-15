@@ -6,7 +6,7 @@
 {%- set v = config.extra.release -%}
 <header class="wrap page-head">
   <h1>Get started</h1>
-  <p class="lead">From nothing to a counter that survives a restart, with no toolchain, then your first actor in your language. The tutorials in the documentation take it from there.</p>
+  <p class="lead">Scaffold a TypeScript app with a front and a durable counter, then develop it with hot reload. The tutorials in the documentation take it from there.</p>
 </header>
 <div class="wrap rail rail-rev">
   <ol class="steps">
@@ -17,26 +17,25 @@
       <p class="small">Every file of a release is signed: <a href="{{ docs }}/deploy/single-node.html">check a download</a> before you trust it. On macOS and Windows, use the image <code>ghcr.io/wasmkeep/wasmkeep:{{ v }}</code> or build from source.</p>
     </li>
     <li>
-      <h2>Serve the counter</h2>
-      <p>A release carries the counter example already built and signed, so this needs no toolchain. In the same shell as step 1, which set <code>$u</code> and <code>$v</code>:</p>
-      <pre class="term" data-copy tabindex="0"><code>curl -fsSLO "$u/releases/download/v$v/counter.wasm"
-wasmkeep serve --actor counter=counter.wasm</code></pre>
-      <p>In another terminal:</p>
-      <pre class="term" data-copy tabindex="0"><code>curl -X POST localhost:8080/actor/counter/alice   <span class="cm"># 1</span>
-curl -X POST localhost:8080/actor/counter/alice   <span class="cm"># 2</span>
-curl localhost:8080/actor/counter/bob             <span class="cm"># 0, a separate actor</span></code></pre>
-      <p>Each name is its own actor with its own SQLite database under <code>.wasmkeep/data/</code>. Restart the server and the counts are still there.</p>
+      <h2>Create an app and run it</h2>
+      <p>With Node.js and npm installed, scaffold the shipped TypeScript app. The directory must be new or empty:</p>
+      <pre class="term" data-copy tabindex="0"><code>wasmkeep new my-app --lang typescript --front
+cd my-app
+npm install
+wasmkeep dev</code></pre>
+      <p>Open <code>http://127.0.0.1:8080</code>. The scaffold includes a front with a page and an API, an internal <code>counter</code> class, and <code>wasmkeep.toml</code>. Its SDK is pinned to your CLI's version. <code>wasmkeep dev</code> rebuilds on save, keeping the data.</p>
+      <p class="small">The scaffold is built into the CLI; installing dependencies needs the network. Rust is also supported with <code>--lang rust</code>. See <a href="{{ docs }}/tutorials/first-actor.html#starting-a-project-with-wasmkeep-new">starting a project</a> for the commands and options.</p>
     </li>
     <li>
-      <h2>Write your own actor</h2>
-      <p>Install the SDK of your language, at the version of your server, then follow its guide.</p>
+      <h2>Alternative: set up the SDK yourself</h2>
+      <p>Install the SDK of your language at the version of your server, then follow its guide. Languages need a toolchain that builds WASI 0.2 components for WasmKeep's interfaces; <a href="{{ docs }}/languages.html">SDK features vary by language</a>.</p>
       <div class="table-scroll">
         <table class="price-table">
           <thead><tr><th scope="col">Language</th><th scope="col">Install</th><th scope="col">Start from</th></tr></thead>
           <tbody>
-            <tr><td>Rust</td><td>cargo add wasmkeep-sdk</td><td><a href="{{ docs }}/tutorials/first-actor.html">Your first actor in 10 minutes</a></td></tr>
-            <tr><td>TypeScript</td><td>npm install @wasmkeep/sdk</td><td><a href="{{ config.extra.tree }}/sdks/typescript">its README</a></td></tr>
-            <tr><td>Python</td><td>pip install wasmkeep</td><td><a href="{{ config.extra.tree }}/sdks/python">its README</a></td></tr>
+            <tr><td>Rust</td><td>cargo add wasmkeep-sdk@{{ v }}</td><td><a href="{{ docs }}/tutorials/first-actor.html">Your first actor in 10 minutes</a></td></tr>
+            <tr><td>TypeScript</td><td>npm install @wasmkeep/sdk@{{ v }}</td><td><a href="{{ config.extra.tree }}/sdks/typescript">its README</a></td></tr>
+            <tr><td>Python</td><td>pip install wasmkeep=={{ v }}</td><td><a href="{{ config.extra.tree }}/sdks/python">its README</a></td></tr>
             <tr><td>Go (TinyGo)</td><td>go get github.com/wasmkeep/wasmkeep/sdks/go@v{{ v }}</td><td><a href="{{ config.extra.tree }}/sdks/go">its README</a></td></tr>
             <tr><td>C, Zig</td><td>the SDK archive from the release</td><td>the README in each archive</td></tr>
           </tbody>
@@ -63,7 +62,7 @@ curl localhost:8080/actor/counter/bob             <span class="cm"># 0, a separa
     </div>
     <div class="callout">
       <h3>This site's source is an example</h3>
-      <p>The site is built as a WasmKeep app: a Rust front that serves the pages and calls a counter actor. Its source is a complete app.</p>
+      <p>The site is built as a WasmKeep app: a Rust front that serves the pages and calls the language wall's counter actors. The site is not deployed yet; run it locally to try the app. Its source is a complete app.</p>
       <p><a href="{{ config.extra.source }}">WasmKeep/website</a></p>
     </div>
     <div class="callout">

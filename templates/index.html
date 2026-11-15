@@ -4,8 +4,8 @@
 {%- set blob = config.extra.blob -%}
 <section class="hero wrap" aria-labelledby="hero-title">
   <div class="hero-text">
-    <h1 id="hero-title">Stateful actors in any language, on servers you own.</h1>
-    <p class="lead">WasmKeep runs one small program per room, user, tenant or device. Each is a WebAssembly component with its own SQLite database, handling one event at a time, replicated to a bucket you own.</p>
+    <h1 id="hero-title">Stateful WASI 0.2 actors, on servers you own.</h1>
+    <p class="lead">WasmKeep runs one small program per room, user, tenant or device. Each is a WebAssembly component with its own SQLite database, handling one event at a time, replicated to a bucket you own. Use languages whose toolchains build WASI 0.2 components for WasmKeep's interfaces; SDK features vary by language.</p>
     <p class="status">{{<icon name="alert" />}}<span><strong>Pre-alpha, {{ config.extra.release }}.</strong> Soaked with nodes killed under load, but not yet carrying real users' traffic. Do not trust it with data you care about yet. <a href="{{ config.extra.docs }}/overview.html">What works today</a>.</span></p>
     <p class="actions">
       <a class="button primary" href="/get-started/">{{<icon name="terminal" />}}<span>Get started</span></a>
@@ -44,12 +44,12 @@
         <p>One binary per node; nodes share a bucket you own. Soaked against Cloudflare R2 and OVHcloud Object Storage with nodes killed under load.</p>
       </li>
       <li>
-        <h3>{{<icon name="languages" />}}Any language that compiles to WebAssembly</h3>
-        <p>Actors are standard WASI 0.2 components. Rust, Zig and C cost about the same per request: 104, 107 and 110 µs of server CPU on one workstation.<a class="fn" href="#n3" aria-label="Source 3">3</a></p>
+        <h3>{{<icon name="languages" />}}Languages that build WASI 0.2 components</h3>
+        <p>Actors implement WasmKeep's interfaces as WASI 0.2 components; SDK features vary by language. Rust, Zig and C cost about the same per request: 104, 107 and 110 µs of server CPU on one workstation.<a class="fn" href="#n3" aria-label="Source 3">3</a></p>
       </li>
       <li>
-        <h3>{{<icon name="cloud" />}}Acknowledged only once it is in the bucket</h3>
-        <p>A write made with <code>exec-durable</code> answers after the bucket holds it, so it survives its node: none lost over 239 kills in 12 hours.<a class="fn" href="#n1" aria-label="Source 1">1</a></p>
+        <h3>{{<icon name="cloud" />}}Durable writes acknowledged once in the bucket</h3>
+        <p>A write made with <code>exec-durable</code> answers after the bucket holds it, so it survives its node: no acknowledged durable writes lost over 239 kills in 12 hours.<a class="fn" href="#n1" aria-label="Source 1">1</a> Plain writes may lose the latest events on a crash.</p>
       </li>
       <li>
         <h3>{{<icon name="check" />}}Apache-2.0, developed in the open</h3>
@@ -95,8 +95,8 @@
 <section id="wall" class="wrap rail wall" aria-labelledby="wall-title">
   <div class="rail-head">
     <h2 id="wall-title">Try it: a live actor</h2>
-    <p>The tile is a real actor behind this page: the Rust counter from the examples, one actor named <code>wall</code>. Add one, and the count is written to that actor's own SQLite database.</p>
-    <p class="small">The page's front reads it with a batch of calls (<code>GET /api/wall</code>). The counter in more languages joins when WasmKeep 0.4.2 publishes their components.</p>
+    <p>Each available tile calls a counter actor from the examples, one actor named <code>wall</code> per language class. Add one, and the count is written to that actor's own SQLite database.</p>
+    <p class="small">The page's front reads the counters with a batch of calls (<code>GET /api/wall</code>). WasmKeep 0.4.2 ships signed Rust, TypeScript, Python, Go (TinyGo), C and Zig counters, enabled in this app. D, MoonBit and C# show as soon. The site is not deployed yet; run it locally to try them.</p>
   </div>
   <div class="wall-body">
     <ul class="wall-grid">
@@ -110,7 +110,7 @@
     </ul>
     <p class="wall-status" role="status" aria-live="polite"></p>
     <div class="identity">
-      <h3>Behind the tile</h3>
+      <h3>Behind the tiles</h3>
       <dl class="identity-list">
         <div><dt>Actor</dt><dd data-id="addrs"><code>rust/wall</code></dd></div>
         <div><dt>Stored count</dt><dd data-id="total">-</dd></div>
@@ -134,13 +134,13 @@
     <div>
       <ul class="stats">
         <li><span class="stat-n">0</span><span class="stat-l">acknowledged durable writes lost, over 2,306,192 of them and 239 node kills in 12 hours on three VPS</span><a class="fn" href="#n1" aria-label="Source 1">1</a></li>
-        <li><span class="stat-n">17.6 s</span><span class="stat-l">median until a dead node's actors are writable again elsewhere; 23.1 s at p99, 27.1 s at worst in that 2-hour run</span><a class="fn" href="#n2" aria-label="Source 2">2</a></li>
+        <li><span class="stat-n">17.4 s</span><span class="stat-l">median until a dead node's actors are writable again elsewhere; 22.5 s at p99, 29.0 s at worst in that 2-hour run</span><a class="fn" href="#n2" aria-label="Source 2">2</a></li>
         <li><span class="stat-n">81 ms</span><span class="stat-l">median durable write as a client sees it, next to the bucket, under load</span><a class="fn" href="#n2" aria-label="Source 2">2</a></li>
         <li><span class="stat-n">61 µs</span><span class="stat-l">median read of a resident Rust actor; 250 KB of memory per resident actor</span><a class="fn" href="#n3" aria-label="Source 3">3</a></li>
       </ul>
       <ol class="notes">
         <li id="n1">Three OVHcloud VPS next to OVHcloud Object Storage, a node killed every 3 minutes for 12 hours, every acknowledged write read back: <a href="{{ blob }}/bench/results/2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv">2026-11-12-b849bfe-soak-ovh-bhs-3vps-12h.csv</a>. Worst time to writable again in that run: 33.7 s. Durable writes only: plain writes, which answer before the upload, may be lost with their node, and a 3-hour run lost 2 (<a href="{{ blob }}/bench/results/2026-11-13-648c2d1-soak-ovh-bhs-3vps-3h.csv">648c2d1</a>). The files' write errors are attempts that got no acknowledgement (an error or no answer, as while a node is down); only acknowledged writes are checked and counted.</li>
-        <li id="n2">The 0.4.1 release candidate, the same three VPS, 2 hours, 39 kills, 1,225 actors taken over, worst 27.1 s: <a href="{{ blob }}/bench/results/2026-11-14-0bf0547-soak-ovh-bhs-3vps-2h-0.4.1-rc.csv">2026-11-14-0bf0547-soak-ovh-bhs-3vps-2h-0.4.1-rc.csv</a>. Durable write p99: 1.02 s.</li>
+        <li id="n2">The 0.4.2 release candidate, the same three VPS, 2 hours, 39 kills, 1,264 actors taken over, worst 29.0 s: <a href="{{ blob }}/bench/results/2026-11-14-563cb94-soak-ovh-bhs-3vps-2h-0.4.2-rc.csv">2026-11-14-563cb94-soak-ovh-bhs-3vps-2h-0.4.2-rc.csv</a>. Durable write p99: 1.02 s.</li>
         <li id="n3">A 16-core workstation, data on tmpfs, eight clients: <a href="{{ blob }}/bench/results/2026-11-06-351ea57.csv">2026-11-06-351ea57.csv</a>. The machine changes the answer; read it as an order of magnitude.</li>
       </ol>
     </div>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 {%- block head %}
-<title>{% block title %}{{ config.title }}: stateful actors in any language, on servers you own{% endblock title %}</title>
+<title>{% block title %}{{ config.title }}: stateful WASI 0.2 actors on servers you own{% endblock title %}</title>
 <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
 {%- endblock head %}
 <link rel="stylesheet" href="{{ get_url(path='style.css', cachebust=true) | replace(from=config.base_url, to='') }}">
