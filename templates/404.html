@@ -2,11 +2,12 @@
 {% block title %}Not found - {{ config.title }}{% endblock title %}
 {% block content %}
 <header class="wrap page-head">
-  <h1>Not found</h1>
+  <p class="eyebrow">404</p>
+  <h1>Page not found</h1>
   <p class="lead">There is no page at this address.</p>
 </header>
-<div class="wrap"><div class="prose">
-  <p>The <a href="/">home page</a>, <a href="/get-started/">Get started</a> and the
-  <a href="{{ config.extra.docs }}">documentation</a> may have what you were looking for.</p>
+<div class="wrap section"><div class="prose">
+  <p>Start with the actor model, or return home to explore the site.</p>
+  <p class="actions"><a class="button primary" href="/">Back to home</a><a class="button" href="/how-it-works/">How it works</a></p>
 </div></div>
 {% endblock content %}

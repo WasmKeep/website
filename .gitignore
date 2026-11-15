@@ -1,6 +1,7 @@
 # Build output
 /public/
 /front/target/
+/room/target/
 # Downloaded by scripts/fetch-components.sh, never committed
 /components/
 /.cache/

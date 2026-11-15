@@ -31,29 +31,37 @@
     </ul>
   </nav>
 </header>
-<main id="main">
+<main id="main" tabindex="-1">
 {% block content %}{% endblock content %}
+{% include "partials/reading-path.html" %}
 </main>
 <footer class="site-footer">
   <div class="wrap footer-grid">
     <div>
       <p class="footer-brand">WasmKeep</p>
-      <p>Open source under the Apache License 2.0. Pre-alpha: measured, not yet production-ready.</p>
+      <p>Open source under the Apache License 2.0. Pre-alpha {{ config.extra.release }}. Not yet production-ready.</p>
       <p>This site is built as a WasmKeep app (<a href="{{ config.extra.source }}">source</a>). No cookies, no tracking.</p>
     </div>
-    <ul class="footer-links" aria-label="Learn">
+    <div>
+    <h2 class="footer-heading">Explore</h2>
+    <ul class="footer-links">
       <li><a href="/how-it-works/">How it works</a></li>
-      <li><a href="/features/">Features</a></li>
+      <li><a href="/saved/">What saved means</a></li>
       <li><a href="/compare/">Compare</a></li>
       <li><a href="/cost/">Cost</a></li>
       <li><a href="/get-started/">Get started</a></li>
+      <li><a href="/features/">Features</a></li>
     </ul>
-    <ul class="footer-links" aria-label="Elsewhere">
+    </div>
+    <div>
+    <h2 class="footer-heading">Resources</h2>
+    <ul class="footer-links">
       <li><a href="{{ config.extra.docs }}">Documentation</a></li>
       <li><a href="{{ config.extra.docs }}/benchmarks.html">Benchmarks</a></li>
       <li><a href="{{ config.extra.github }}/releases">Releases</a></li>
       <li><a href="{{ config.extra.github }}">Source on GitHub</a></li>
     </ul>
+    </div>
   </div>
   <div class="wrap footer-legal">
     <p>Cloudflare, Durable Objects and the other product names on this site belong to their owners, named only to describe and compare. WasmKeep is not affiliated with or endorsed by any of them.</p>

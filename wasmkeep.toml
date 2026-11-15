@@ -51,5 +51,12 @@ access = "internal"
 
 # Not in the 0.4.2 release: d, moonbit, csharp.
 
+# One room, wall-room/main, holds the wall's live connections.
+[classes.wall-room]
+component = "room/target/wasm32-wasip2/release/website_wall_room.wasm"
+access = "internal"
+build = "cd room && cargo build --release --target wasm32-wasip2"
+watch = ["room/src", "room/Cargo.toml"]
+
 [dev]
 port = 8080

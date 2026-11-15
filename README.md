@@ -21,7 +21,9 @@ front that serves a static site and calls the app's actors.
   caching (fingerprinted assets for a year, pages for five minutes), and
   answers the language wall's API.
 - `wasmkeep.toml`: the [project file](https://docs.wasmkeep.dev/project-file.html):
-  the front, and one `internal` class per language counter.
+  the front, one `internal` class per language counter, and `wall-room`.
+- `room/`: the Rust actor `wall-room/main`, which broadcasts count changes
+  over sockets held by the host, including while the actor hibernates.
 - `scripts/`: building the site, fetching the components, the smoke test.
 
 ## The language wall
@@ -34,11 +36,21 @@ them.
 - `GET /api/wall`: every language's count, read with one `calls.call-many`
   batch.
 - `POST /api/wall/<lang>`: adds one to that language's counter and returns
-  the new count. `<lang>` is checked against a fixed list.
+  the new count. `<lang>` is checked against a fixed list. A best-effort
+  `POST /notify` call to `wall-room/main` broadcasts `{"lang":"rust","count":1}`;
+  a failed notification does not fail the increment.
+- `GET /api/wall/live` with a WebSocket upgrade: the front hands the
+  connection to `wall-room/main` using the SDK's hand-off API (ADR 0027).
+  A plain GET returns 426. The room ignores client messages, accepts
+  notification bodies of at most 64 bytes, and keeps no count history.
 
 The home page has the counts filled in by the front, and each button is a
 plain form, so the wall works without JavaScript; `static/wall.js` updates
-it in place when JavaScript runs.
+it in place when JavaScript runs. After fetching counts it connects to
+the same-origin WebSocket, refreshing again on open to cover missed writes.
+Closed sockets reconnect with capped exponential backoff and jitter; the
+15-second visible-page refresh remains a fallback. Counts only increase,
+so stale snapshots or out-of-order notifications cannot lower a tile.
 
 The counters come from the signed assets of the WasmKeep release in
 `WASMKEEP_VERSION`. The 0.4.2 release carries Rust (`counter.wasm`),
@@ -76,6 +88,8 @@ downloads is committed.
 
 `scripts/smoke.sh` runs the app with `wasmkeep dev` and checks the pages,
 the caching headers and the wall's API; CI runs it with the released CLI.
+Python 3 (stdlib only) checks that two WebSockets receive the same count
+within one second of a POST, and that client messages cannot broadcast.
 
 ## How it is built
 
@@ -84,8 +98,10 @@ the caching headers and the wall's API; CI runs it with the released CLI.
    embeds every file of `public/` with its content type, ETag and Zola
    fingerprint, and reads the deployed language classes from
    `wasmkeep.toml`.
-3. `wasmkeep dev` (or `wasmkeep deploy`) runs both through the `[front]`
-   build command.
+3. `cargo build --release --target wasm32-wasip2` in `room/` builds the
+   broadcaster. Both Rust crates pin `wasmkeep-sdk` to 0.4.2.
+4. `wasmkeep dev` (or `wasmkeep deploy`) runs the site's `[front]` build
+   command and the room's own class build command.
 
 Not deployed yet. Deployment is handled by the maintainers; not from CI.
 

@@ -5,11 +5,11 @@
 <section class="hero wrap" aria-labelledby="hero-title">
   <div class="hero-text">
     <h1 id="hero-title">Stateful WASI 0.2 actors, on servers you own.</h1>
-    <p class="lead">WasmKeep runs one small program per room, user, tenant or device. Each is a WebAssembly component with its own SQLite database, handling one event at a time, replicated to a bucket you own. Use languages whose toolchains build WASI 0.2 components for WasmKeep's interfaces; SDK features vary by language.</p>
+    <p class="lead">WasmKeep runs one small program per room, user, tenant or device. Each actor is a WebAssembly component with its own SQLite database. It handles one event at a time and replicates its database to your bucket.</p>
     <p class="status">{{<icon name="alert" />}}<span><strong>Pre-alpha, {{ config.extra.release }}.</strong> Soaked with nodes killed under load, but not yet carrying real users' traffic. Do not trust it with data you care about yet. <a href="{{ config.extra.docs }}/overview.html">What works today</a>.</span></p>
     <p class="actions">
-      <a class="button primary" href="/get-started/">{{<icon name="terminal" />}}<span>Get started</span></a>
-      <a class="button" href="{{ config.extra.github }}">{{<icon name="github" />}}<span>GitHub</span></a>
+      <a class="button primary" href="/how-it-works/">{{<icon name="arrow" />}}<span>How it works</span></a>
+      <a class="button" href="/get-started/">{{<icon name="terminal" />}}<span>Get started</span></a>
       <a class="button quiet" href="{{ config.extra.docs }}">{{<icon name="book" />}}<span>Docs</span></a>
     </p>
     <div class="install">
@@ -27,7 +27,7 @@
       <li><code class="addr"><span class="addr-class">device</span>/th-0193</code><span class="ledger-db">{{<icon name="database" />}}its own SQLite</span><span class="ledger-what">last readings, an alarm every minute</span></li>
     </ol>
     <div class="ledger-bucket">{{<icon name="bucket" />}}<span>Replicated to your S3-compatible bucket</span></div>
-    <figcaption id="ledger-cap">One actor per room, user, tenant or device. An address is a class and a name; each name is its own actor, with its own database, running one event at a time. Idle ones leave memory and wake in about a millisecond.</figcaption>
+    <figcaption id="ledger-cap">One actor per room, user, tenant or device. An address is a class and a name; each name is its own actor, with its own database, running one event at a time. Idle actors leave memory and wake on their next event.</figcaption>
   </figure>
 </section>
 
@@ -35,12 +35,12 @@
   <div class="wrap rail">
     <div class="rail-head">
       <h2 id="why-title">Why WasmKeep</h2>
-      <p>The one-object-per-thing model, on your own terms. None of these is unique on its own; together they are what WasmKeep is for.</p>
+      <p>One actor per piece of state, with the runtime on your servers and the data in your bucket.</p>
       <p><a href="/compare/">How it compares, and when to pick something else</a></p>
     </div>
     <ul class="why">
       <li>
-        <h3>{{<icon name="server" />}}Your servers, any S3-compatible bucket</h3>
+        <h3>{{<icon name="server" />}}Your servers, an S3-compatible bucket</h3>
         <p>One binary per node; nodes share a bucket you own. Soaked against Cloudflare R2 and OVHcloud Object Storage with nodes killed under load.</p>
       </li>
       <li>
@@ -53,7 +53,7 @@
       </li>
       <li>
         <h3>{{<icon name="check" />}}Apache-2.0, developed in the open</h3>
-        <p>Every number on this site links the CSV the benchmark scripts wrote, including the runs that failed a check. Pull requests are welcome, under a CLA.</p>
+        <p>Published benchmarks link to raw CSVs, including runs that failed a check. Pull requests are welcome, under a CLA.</p>
       </li>
     </ul>
   </div>
@@ -63,13 +63,14 @@
   <h2 id="demo-title">Kill a node and watch the takeover</h2>
   <p class="small">Three nodes, six actors, one bucket: a model of the default timings, five times faster than real time. <a href="/how-it-works/">How it works</a> explains each step.</p>
   {% set sim_id = "home-sim" %}{% include "partials/sim.html" %}
+  <p class="saved-invite"><a href="/saved/">What saved means</a>: scrub a write's timeline, choose a crash moment, and see which writes survive.</p>
 </section>
 
 <section class="band" aria-labelledby="code-title">
   <div class="wrap rail">
     <div class="rail-head">
-      <h2 id="code-title">The same actor, in your language</h2>
-      <p>The counter from the repository's examples, written six ways. Each is a WebAssembly component; the comments say what survives a dead node.</p>
+      <h2 id="code-title">One counter, six languages</h2>
+      <p>The counter from the repository's examples, written six ways. Each builds a WASI 0.2 component for WasmKeep’s interfaces. SDK features vary by language; the comments explain write durability.</p>
       <p class="small">Excerpts of <code>examples/</code> at v{{ config.extra.release }}, each built in CI. D, MoonBit and C# counters exist too (experimental). <a href="{{ config.extra.docs }}/languages.html">Languages</a> has the trade-offs, with numbers.</p>
     </div>
     <div class="tabs" data-tabs>
@@ -96,7 +97,7 @@
   <div class="rail-head">
     <h2 id="wall-title">Try it: a live actor</h2>
     <p>Each available tile calls a counter actor from the examples, one actor named <code>wall</code> per language class. Add one, and the count is written to that actor's own SQLite database.</p>
-    <p class="small">The page's front reads the counters with a batch of calls (<code>GET /api/wall</code>). WasmKeep 0.4.2 ships signed Rust, TypeScript, Python, Go (TinyGo), C and Zig counters, enabled in this app. D, MoonBit and C# show as soon. The site is not deployed yet; run it locally to try them.</p>
+    <p class="small">This app uses the signed Rust, TypeScript, Python, Go (TinyGo), C and Zig counters from 0.4.2. D, MoonBit and C# are not enabled. The site is not deployed yet; run it locally to try the wall.</p>
   </div>
   <div class="wall-body">
     <ul class="wall-grid">
@@ -109,6 +110,7 @@
       {%- endfor %}
     </ul>
     <p class="wall-status" role="status" aria-live="polite"></p>
+    <p class="small">The wall updates live over a WebSocket held by one actor, <code>wall-room/main</code>.</p>
     <div class="identity">
       <h3>Behind the tiles</h3>
       <dl class="identity-list">
@@ -128,7 +130,7 @@
   <div class="wrap rail">
     <div class="rail-head">
       <h2 id="numbers-title">Measured, with the raw files</h2>
-      <p>Every number here comes from a CSV the benchmark scripts wrote, linked below. None comes from memory, and what was not measured is said.</p>
+      <p>These measurements come from the raw CSVs linked below. Each describes a specific workload and machine, not a performance guarantee.</p>
       <p class="small"><a href="{{ config.extra.docs }}/benchmarks.html#three-nodes-against-a-real-bucket">Three nodes against a real bucket</a> describes the soaks; the harness is <a href="{{ blob }}/crates/wasmkeep-cli/tests/soak.rs">soak.rs</a>.</p>
     </div>
     <div>
@@ -221,13 +223,14 @@
   <div class="wrap rail">
     <div class="rail-head">
       <h2 id="next-title">Where to go next</h2>
-      <p>The documentation has the tutorials, the API in every SDK, and the limits.</p>
+      <p>Follow the path from the actor model to durability, alternatives and cost. Then try a local app.</p>
     </div>
     <ul class="next">
-      <li><a href="/get-started/"><strong>Get started</strong><span>Install, run the counter, write your first actor.</span></a></li>
       <li><a href="/how-it-works/"><strong>How it works</strong><span>Kill a node in the diagram and watch another take its actors.</span></a></li>
+      <li><a href="/saved/"><strong>What saved means</strong><span>See what survives a crash, and what an acknowledgement promises.</span></a></li>
       <li><a href="/compare/"><strong>Compare</strong><span>Durable Objects, celld, Rivet, Golem, Orleans, Dapr, Temporal, Restate.</span></a></li>
       <li><a href="/cost/"><strong>Cost</strong><span>A break-even calculator against Durable Objects, with dated prices.</span></a></li>
+      <li><a href="/get-started/"><strong>Get started</strong><span>Install, scaffold an app and run it locally.</span></a></li>
       <li><a href="{{ config.extra.docs }}"><strong>Documentation</strong><span>docs.wasmkeep.dev</span></a></li>
     </ul>
   </div>
@@ -236,5 +239,6 @@
 {% block scripts %}
 <script src="{{ get_url(path='tabs.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
 <script src="{{ get_url(path='wall.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
+<script src="{{ get_url(path='failover-model.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
 <script src="{{ get_url(path='failover.js', cachebust=true) | replace(from=config.base_url, to='') }}" defer></script>
 {% endblock scripts %}

@@ -1,0 +1,21 @@
+[package]
+name = "website-wall-room"
+description = "The WasmKeep website's live language wall broadcaster."
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasmkeep-sdk = "=0.4.2"
+
+[profile.release]
+opt-level = "s"
+strip = true
+lto = true
+codegen-units = 1

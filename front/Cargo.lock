@@ -292,9 +292,9 @@ dependencies = [
 
 [[package]]
 name = "wasmkeep-sdk"
-version = "0.4.0"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96dcda864a541911218fc9e7b30e76c88fe8ae64858dd78f63bbe5d8768b0811"
+checksum = "55c956c1bee7054a74091bdd24efa55cc6f744b7b928cadb004ab89a2554be18"
 dependencies = [
  "wasip2",
  "wit-bindgen 0.63.0",

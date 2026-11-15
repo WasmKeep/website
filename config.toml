@@ -38,10 +38,11 @@ wall = [
 
 menu = [
   { name = "How it works", path = "/how-it-works/" },
-  { name = "Features", path = "/features/" },
+  { name = "What saved means", path = "/saved/" },
   { name = "Compare", path = "/compare/" },
   { name = "Cost", path = "/cost/" },
   { name = "Get started", path = "/get-started/" },
+  { name = "Features", path = "/features/" },
 ]
 
 # The WasmKeep release the site's install commands, numbers and example

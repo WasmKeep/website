@@ -1,5 +1,5 @@
 // The break-even calculator on /cost/. Prices: the vendors' own pages,
-// read on 2026-11-14 (listed on the page). Currencies are never converted:
+// prices checked on vendor pages 2026-11-15. Currencies are never converted:
 // a bill is a sum per currency, and a chart draws one currency per axis.
 // Chart colours: the validated pair --series-self / --series-cf (dataviz
 // validator, light and dark), with a dashed line for Cloudflare so the
@@ -10,108 +10,10 @@
   if (!root) return;
   root.hidden = false;
 
-  const M = 1e6;
-  const MONTH_S = 30 * 24 * 3600;
-  const NODES = 3;
-  const GB_PER_OBJECT = 128 / 1024; // Cloudflare bills 128 MB per active object
-
-  // Measured writes; idle rates derived from 0.4.2's documented cadences,
-  // not yet re-measured (see "Assumptions" on the page).
-  const PUT_PER_WRITE = 1.03;
-  // Per node and second: three nodes, one app, no alarms or idle expiry.
-  // Lease PUT every 3 s; node LIST every 30 s, three intent LISTs and
-  // one alarm LIST every 60 s; heartbeat GETs, control/changed, and the
-  // app's version, tombstone and secrets GETs every 3 s.
-  const IDLE = { put: 1 / 3, list: 1 / 30 + 3 / 60 + 1 / 60, get: (NODES + 1 + 3) / 3 };
-  // The highest rate of acknowledged durable writes among the soaks the
-  // site cites: 643,891 in 10,804.5 s (648c2d1, 3 h); b849bfe carried
-  // 53.4 a second, 0bf0547 52.3.
-  const SOAK_WRITES_PER_S = 643891 / 10804.5;
-
-  const VPS = {
-    ovh1: { name: "3 x OVHcloud VPS-1", cur: "USD", price: 4.54, disk: 40 },
-    ovh2: { name: "3 x OVHcloud VPS-2", cur: "USD", price: 8.5, disk: 75 },
-    cx23: { name: "3 x Hetzner CX23", cur: "EUR", price: 5.99, disk: 40 },
-    cx33: { name: "3 x Hetzner CX33", cur: "EUR", price: 8.99, disk: 80 },
-  };
-
-  // The three scenarios of our cost research, each with its assumptions in
-  // one line. Extremes are reachable through the inputs, not as presets.
-  const PRESETS = {
-    api50: {
-      note: "An API at 1 million requests a day (30 million a month) over 10,000 actors: 20% write 2 rows, each request reads 20 rows, 2 ms of Worker CPU, 50 ms of billed wall-clock, 5 GB stored.",
-      v: { req: 30e6, wshare: 20, rows: 2, rread: 20, msgs: 0, conns: 0, rconn: 0, gb: 5, awake: 0, wall: 50, cpu: 2 },
-    },
-    api500: {
-      note: "The same API, but each request keeps its object busy for 500 ms of billed wall-clock (waiting on an outside call, say).",
-      v: { req: 30e6, wshare: 20, rows: 2, rread: 20, msgs: 0, conns: 0, rconn: 0, gb: 5, awake: 0, wall: 500, cpu: 2 },
-    },
-    chat: {
-      note: "Chat: 100,000 rooms, 2 million WebSocket connections and 50 million incoming messages a month; each message writes 1 row and 1 index entry, each connection reads 50 rows of history; rooms hibernate between messages (10 ms billed per message assumed); about 50 GB stored.",
-      v: { req: 0, wshare: 0, rows: 2, rread: 0, msgs: 50e6, conns: 2e6, rconn: 50, gb: 50, awake: 0, wall: 10, cpu: 1 },
-    },
-    saas: {
-      note: "A SaaS with 1,000 tenant databases: 20 million requests a month, 25% write 4 rows, each request reads 100 rows, 5 ms of Worker CPU, 200 ms of billed wall-clock, 50 GB stored.",
-      v: { req: 20e6, wshare: 25, rows: 4, rread: 100, msgs: 0, conns: 0, rconn: 0, gb: 50, awake: 0, wall: 200, cpu: 5 },
-    },
-  };
-
+  const { MONTH_S, SOAK_WRITES_PER_S, VPS, PRESETS, writesOf, cloudflare, selfHosted, scaled } = window.CostModel;
   const form = document.getElementById("calc-form");
   const $ = (id) => document.getElementById(id);
-  const fields = ["req", "wshare", "rows", "rread", "msgs", "conns", "rconn", "gb", "awake", "wall", "cpu"];
-  // Writes: the requests that write, and every incoming message.
-  const writesOf = (w) => w.req * (w.wshare / 100) + w.msgs;
-
-  const over = (used, free, unit) => Math.ceil(Math.max(0, used - free) / unit) * unit;
-
-  // Cloudflare Workers Paid + Durable Objects (USD).
-  const cloudflare = (w) => {
-    const writes = writesOf(w);
-    const workerReqs = w.req + w.conns; // a WebSocket starts with one request
-    const gbs = (w.req + w.msgs) * (w.wall / 1000) * GB_PER_OBJECT + w.awake * GB_PER_OBJECT * MONTH_S;
-    const lines = [
-      ["Workers Paid plan", 5],
-      ["Workers requests", (Math.max(0, workerReqs - 10 * M) / M) * 0.3],
-      ["Workers CPU time", (Math.max(0, workerReqs * w.cpu - 30 * M) / M) * 0.02],
-      // Incoming WebSocket messages are billed 20 to 1 as requests.
-      ["Durable Objects requests", (over(workerReqs + w.msgs / 20, M, M) / M) * 0.15],
-      ["Duration", (over(gbs, 400000, M) / M) * 12.5],
-      ["Rows written", (over(writes * w.rows, 50 * M, M) / M) * 1],
-      ["Rows read", (over(w.req * w.rread + w.conns * w.rconn, 25e9, M) / M) * 0.001],
-      ["Stored data", over(w.gb, 5, 1) * 0.2],
-    ];
-    return { lines: lines.map(([l, v]) => [l, v, "USD"]), totals: { USD: sum(lines) } };
-  };
-
-  // Three VPS and a bucket (the currency of each).
-  const selfHosted = (w, vpsKey, bucket) => {
-    const writes = writesOf(w);
-    const put = writes * PUT_PER_WRITE + IDLE.put * NODES * MONTH_S;
-    const list = IDLE.list * NODES * MONTH_S;
-    const get = IDLE.get * NODES * MONTH_S;
-    const vps = VPS[vpsKey];
-    const lines = [[vps.name, vps.price * NODES, vps.cur]];
-    if (bucket === "r2") {
-      lines.push(["R2 Class A (PUT, LIST)", (Math.max(0, put + list - M) / M) * 4.5, "USD"]);
-      lines.push(["R2 Class B (GET)", (Math.max(0, get - 10 * M) / M) * 0.36, "USD"]);
-      lines.push(["R2 storage", Math.max(0, w.gb - 10) * 0.015, "USD"]);
-    } else if (bucket === "ovhos") {
-      lines.push(["OVHcloud Object Storage", w.gb * 0.0081103, "USD"]);
-      lines.push(["Its API requests", 0, "USD"]);
-    } else {
-      const tb = w.gb / 1000;
-      lines.push(["Hetzner Object Storage", 6.49 + Math.max(0, tb - 1) * 0.0087 * 720, "EUR"]);
-      lines.push(["Its API requests", 0, "EUR"]);
-    }
-    const totals = {};
-    for (const [, v, c] of lines) totals[c] = (totals[c] || 0) + v;
-    return { lines, totals, requests: { put, list, get }, writes };
-  };
-
-  function sum(lines) {
-    return lines.reduce((s, l) => s + l[1], 0);
-  }
-
+  const fields = Object.keys(PRESETS.largeApi.v);
   const money = (v, cur, cents) => {
     const sym = cur === "EUR" ? "€" : "US$";
     const digits = cents || (v !== 0 && Math.abs(v) < 10) ? 2 : 0;
@@ -152,11 +54,11 @@
 
   // Requests per month along the x axis, on a log scale.
   // The x axis scales your traffic (requests, messages, connections and
-  // the writes they make) from a hundredth to a hundred times; stored data
-  // and always-awake actors stay as you set them.
-  const X0 = 0.01;
+  // the writes they make) from a thousandth to a hundred times; stored data
+  // and actors scale together; per-event costs stay fixed.
+  const X0 = 0.001;
   const X1 = 100;
-  const STEPS = 80;
+  const STEPS = 100;
   const sweepXs = [...Array(STEPS + 1)].map((_, i) => X0 * Math.pow(X1 / X0, i / STEPS));
 
   const svgNS = "http://www.w3.org/2000/svg";
@@ -168,7 +70,7 @@
   };
 
   // One panel per currency: a line per series that bills in it.
-  const panel = (title, cur, series, w, cross) => {
+  const panel = (title, cur, series, factor, crosses) => {
     const box = document.createElement("div");
     box.className = "chart-panel";
     const h = document.createElement("h3");
@@ -193,7 +95,7 @@
     box.append(legend);
 
     // Drawn at the panel's own width, so its text stays legible on a phone.
-    const W = Math.max(300, Math.min(760, ($("charts").clientWidth || 640) - 34));
+    const W = Math.max(240, Math.min(760, ($("charts").clientWidth || 640) - 34));
     const H = W < 480 ? 220 : 260;
     const L = 64;
     const R = 16;
@@ -201,12 +103,12 @@
     const B = 46;
     // Both axes are logarithmic: bills span four orders of magnitude.
     const ys = series.flatMap((s) => s.ys).filter((y) => y > 0);
-    const lo = Math.floor(Math.log10(Math.max(1, Math.min(...ys))));
+    const lo = Math.floor(Math.log10(Math.max(1, Math.min(...(ys.length ? ys : [1])))));
     const hi = Math.max(lo + 1, Math.ceil(Math.log10(Math.max(10, ...ys))));
     const yMax = Math.pow(10, hi);
     const sx = (x) => L + ((Math.log10(x) - Math.log10(X0)) / (Math.log10(X1) - Math.log10(X0))) * (W - L - R);
     const sy = (y) => T + (1 - (Math.log10(Math.max(y, Math.pow(10, lo))) - lo) / (hi - lo)) * (H - T - B);
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `${title}: monthly bill against your traffic, from a hundredth to a hundred times, both on logarithmic scales` });
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `${title}: monthly bill against your traffic, from a thousandth to a hundred times, both on logarithmic scales` });
     for (let e = lo; e <= hi; e++) {
       const y = Math.pow(10, e);
       el("line", { class: "ch-grid", x1: L, x2: W - R, y1: sy(y), y2: sy(y) }, svg);
@@ -214,12 +116,12 @@
       const n = y >= 1e6 ? `${y / 1e6}M` : y >= 1e3 ? `${y / 1e3}k` : String(y);
       t.textContent = `${cur === "EUR" ? "€" : "US$"}${n}`;
     }
-    for (const x of W < 480 ? [0.01, 1, 100] : [0.01, 0.1, 1, 10, 100]) {
+    for (const x of W < 480 ? [0.001, 1, 100] : [0.001, 0.01, 0.1, 1, 10, 100]) {
       const t = el("text", { class: "ch-axis", x: sx(x), y: H - 28, "text-anchor": "middle" }, svg);
       t.textContent = times(x);
     }
     const xl = el("text", { class: "ch-axis", x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle" }, svg);
-    xl.textContent = "your traffic, times (log scale)";
+    xl.textContent = "app size, times (log scale; zero at floor)";
     const pathOf = (ys, from, to) =>
       ys
         .slice(from, to + 1)
@@ -230,21 +132,21 @@
       let cut = STEPS;
       if (s.beyond !== undefined) {
         const k = sweepXs.findIndex((x) => x > s.beyond);
-        if (k >= 0) cut = Math.max(0, k);
+        if (k >= 0) cut = Math.max(0, k - 1);
       }
       el("path", { class: `ch-line ${s.cf ? "ch-cf" : "ch-self"}`, d: pathOf(s.ys, 0, cut) }, svg);
       if (cut < STEPS) el("path", { class: "ch-line ch-beyond", d: pathOf(s.ys, cut, STEPS) }, svg);
     }
     {
-      el("line", { class: "ch-now", x1: sx(1), x2: sx(1), y1: T, y2: H - B }, svg);
-      const t = el("text", { class: "ch-label", x: sx(1) + 4, y: T + 10 }, svg);
-      t.textContent = "you";
+      el("line", { class: "ch-now", x1: sx(factor), x2: sx(factor), y1: T, y2: H - B }, svg);
+      const t = el("text", { class: "ch-label", x: sx(factor) + 4, y: T + 10 }, svg);
+      t.textContent = "selected";
     }
-    if (cross) {
+    for (const cross of crosses) {
       el("circle", { class: "ch-cross", cx: sx(cross.x), cy: sy(cross.y), r: 5 }, svg);
       const right = sx(cross.x) > W * 0.7;
       const t = el("text", { class: "ch-label", x: sx(cross.x) + (right ? -9 : 9), y: sy(cross.y) - 9, "text-anchor": right ? "end" : "start" }, svg);
-      t.textContent = `cross at ${times(cross.x)}`;
+      t.textContent = `~${times(cross.x)}`;
     }
     // Hover and focus: a crosshair that snaps to the nearest step.
     const hair = el("line", { class: "ch-hair", y1: T, y2: H - B, visibility: "hidden" }, svg);
@@ -255,14 +157,14 @@
     fig.className = "chart-focus";
     fig.tabIndex = 0;
     fig.setAttribute("role", "group");
-    fig.setAttribute("aria-label", `${title}: use the left and right arrow keys to read the bills at each number of requests`);
+    fig.setAttribute("aria-label", `${title}: use the left and right arrow keys to read the bills at application size`);
     fig.append(svg);
     const tip = document.createElement("div");
     tip.className = "tip";
     tip.hidden = true;
     tip.setAttribute("aria-live", "polite");
     box.append(fig, tip);
-    let at = STEPS / 2;
+    let at = Math.round((Math.log10(factor) + 3) / 5 * STEPS);
     const showAt = (i) => {
       at = Math.max(0, Math.min(STEPS, i));
       const x = sx(sweepXs[at]);
@@ -271,7 +173,7 @@
       hair.setAttribute("visibility", "visible");
       tip.replaceChildren();
       const head = document.createElement("div");
-      head.textContent = `${times(sweepXs[at])} your traffic`;
+      head.textContent = `${times(sweepXs[at])} app size`;
       tip.append(head);
       series.forEach((s, j) => {
         dots[j].setAttribute("cx", x);
@@ -284,11 +186,7 @@
         tip.append(row);
       });
       tip.hidden = false;
-      const rect = svg.getBoundingClientRect();
-      const px = (x / W) * rect.width + (rect.left - box.getBoundingClientRect().left);
-      const room = box.clientWidth - tip.offsetWidth - 4;
-      tip.style.left = `${Math.max(4, px + 12 > room ? px - tip.offsetWidth - 12 : px + 12)}px`;
-      tip.style.top = `${rect.top - box.getBoundingClientRect().top + 8}px`;
+      // Keep details in document flow: readable on narrow screens and CSP-safe.
     };
     const hide = () => {
       tip.hidden = true;
@@ -313,109 +211,72 @@
     return box;
   };
 
+  const comparison = (cf, self) => {
+    if (cf === 0) return "Cloudflare wins: US$0 within modeled Free quotas; no finite price ratio";
+    if (Math.abs(cf - self) < 1) return "About the same infrastructure bill";
+    return cf > self
+      ? `WasmKeep is about ${times(cf / self)} cheaper in this estimate (${money(cf - self, "USD")} less/month)`
+      : `Cloudflare is about ${times(self / cf)} cheaper in this estimate (${money(self - cf, "USD")} less/month)`;
+  };
   const render = () => {
-    const w = read();
-    const vps = form.elements.vps.value;
-    const bucket = form.elements.bucket.value;
-    const cf = cloudflare(w);
-    const self = selfHosted(w, vps, bucket);
-    fill($("cf-lines"), cf.lines);
-    fill($("self-lines"), self.lines);
+    const base = read();
+    const factor = 10 ** (Number($("in-scale").value) / 10);
+    const w = scaled(base, factor);
+    const vps = form.elements.vps.value, bucket = form.elements.bucket.value;
+    const batched = $("in-batched").checked;
+    const cf = cloudflare(w), self = selfHosted(w, vps, bucket, batched);
+    const today = selfHosted(w, vps, bucket), projection = selfHosted(w, vps, bucket, true);
+    $("scale-value").textContent = `${times(factor)} app size`;
+    $("scale-workload").textContent = `${big(Math.round(w.req / 30))} HTTP requests/day; ${big(Math.round(w.msgs / 30))} messages/day; ${Math.round(self.writes / MONTH_S).toLocaleString("en-US")} writes/s; ${big(w.actors)} actors; ${big(w.sockets)} concurrent sockets; ${big(Math.round(w.gb))} GB.`;
+    fill($("cf-lines"), cf.lines); fill($("self-lines"), self.lines);
     $("cf-total").textContent = `${totalText(cf.totals)} / month`;
     $("self-total").textContent = `${totalText(self.totals)} / month`;
-
-    const curs = Object.keys(self.totals).filter((c) => self.totals[c] > 0 || c === "USD");
-    const allUsd = Object.keys(self.totals).every((c) => c === "USD");
-    const at = (f) => ({ ...w, req: w.req * f, msgs: w.msgs * f, conns: w.conns * f });
-    const cfYs = sweepXs.map((x) => cloudflare(at(x)).totals.USD);
-    const selfUsd = sweepXs.map((x) => selfHosted(at(x), vps, bucket).totals.USD || 0);
-    const selfEur = sweepXs.map((x) => selfHosted(at(x), vps, bucket).totals.EUR || 0);
-
-    let cross = null;
-    if (allUsd) {
-      for (let i = 1; i < sweepXs.length; i++) {
-        const a = cfYs[i - 1] - selfUsd[i - 1];
-        const b = cfYs[i] - selfUsd[i];
-        if ((a < 0 && b >= 0) || (a > 0 && b <= 0)) {
-          const f = a / (a - b);
-          const lx = Math.log10(sweepXs[i - 1]) + f * (Math.log10(sweepXs[i]) - Math.log10(sweepXs[i - 1]));
-          cross = { x: Math.pow(10, lx), y: cfYs[i - 1] + f * (cfYs[i] - cfYs[i - 1]), cfAbove: b > a };
-          break;
-        }
+    $("self-heading").textContent = batched ? "WasmKeep — planned 0.5.0 projection" : "WasmKeep 0.4.2 — estimated fleet";
+    const allUsd = Object.keys(self.totals).every(c => c === "USD");
+    const cfYs = sweepXs.map(x => cloudflare(scaled(base, x)).totals.USD);
+    const fleet = sweepXs.map(x => selfHosted(scaled(base, x), vps, bucket, batched));
+    const selfUsd = fleet.map(s => s.totals.USD || 0), selfEur = fleet.map(s => s.totals.EUR || 0);
+    // Keep every sign change: stepwise node purchases and request rounding can
+    // produce multiple crossings. Refine each bracket, not a false straight line.
+    const crosses = [];
+    if (allUsd) for (let i = 1; i < sweepXs.length; i++) {
+      const sign = cfYs[i - 1] > selfUsd[i - 1];
+      if (sign === (cfYs[i] > selfUsd[i])) continue;
+      let lo = sweepXs[i - 1], hi = sweepXs[i];
+      for (let j = 0; j < 24; j++) {
+        const mid = Math.sqrt(lo * hi), mw = scaled(base, mid);
+        if ((cloudflare(mw).totals.USD > selfHosted(mw, vps, bucket, batched).totals.USD) === sign) lo = mid;
+        else hi = mid;
       }
+      crosses.push({ x: hi, y: cloudflare(scaled(base, hi)).totals.USD });
     }
-
-    const verdict = $("verdict");
-    if (allUsd) {
-      const d = cf.totals.USD - self.totals.USD;
-      const now =
-        Math.abs(d) < 1
-          ? "about the same"
-          : d > 0
-            ? `${money(d, "USD")} more a month on Cloudflare`
-            : `${money(-d, "USD")} more a month self-hosted`;
-      verdict.textContent = `At your numbers: ${now}, before your time and the rest of what the bill leaves out. ${
-        cross
-          ? `Scaling your traffic with storage fixed, ${cross.cfAbove ? "Cloudflare" : "self-hosting"} costs more above about ${times(cross.x)} your traffic.`
-          : `Scaling your traffic from a hundredth to a hundred times, with storage fixed, ${cfYs[0] > selfUsd[0] ? "self-hosting" : "Cloudflare"} stays cheaper throughout.`
-      }`;
-    } else {
-      verdict.textContent = `Cloudflare: ${totalText(cf.totals)}. Self-hosted: ${totalText(self.totals)}. Part of that is in euros, and we do not convert currencies, so no crossing is drawn: compare the two at your own exchange rate.`;
-    }
-    if (w.awake > 0) {
-      const dur = cf.lines.find((l) => l[0] === "Duration")[1];
-      verdict.textContent += ` The ${w.awake.toLocaleString("en-US")} actors that never hibernate are ${money(dur, "USD", true)} of Cloudflare's duration bill: actors that use its WebSocket Hibernation API are not billed while idle, so check whether yours can.`;
-    }
-
-    const perS = self.writes / MONTH_S;
-    const soaked = SOAK_WRITES_PER_S.toFixed(0);
-    const disk = VPS[vps].disk;
-    const notes = [
-      perS > SOAK_WRITES_PER_S
-        ? `Your writes come to about ${perS.toFixed(0)} a second, above the ${soaked} a second the busiest of our soaks carried on three VPS: whether three small VPS keep up is not measured.`
-        : `Three small VPS carrying this is assumed, not measured; your writes come to about ${perS.toFixed(1)} a second (the busiest of our soaks carried ${soaked}).`,
-    ];
-    if (w.gb > disk) {
-      notes.push(
-        `Disk: each actor's database lives on the disk of the node that runs it, and these VPS have ${disk} GB each. ${
-          w.gb > 3 * disk * 0.8 ? `${w.gb} GB does not fit on three of them` : `${w.gb} GB fits only if it spreads evenly, with room left when a node dies`
-        }; bigger disks or servers are not in this bill.`,
-      );
-    }
-    notes.push(`Bucket requests: ${big(Math.round(self.requests.put))} PUT, ${big(Math.round(self.requests.list))} LIST, ${big(Math.round(self.requests.get))} GET a month. Idle floor derived from 0.4.2's documented cadences, not yet re-measured.`);
-    $("capacity").textContent = notes.join(" ");
-    if (perS > SOAK_WRITES_PER_S || w.gb > disk) {
-      verdict.textContent += " The servers in this bill may not carry it: read the capacity and disk notes below the bills.";
-    }
-
-    // The traffic factor at which writes pass the soaked rate.
-    const rStar = self.writes > 0 ? (SOAK_WRITES_PER_S * MONTH_S) / self.writes : Infinity;
-    const charts = $("charts");
-    charts.replaceChildren();
+    $("verdict").textContent = allUsd
+      ? `${batched ? "Planned 0.5.0 projection. " : "0.4.2 estimate. "}${comparison(cf.totals.USD, self.totals.USD)} at this size. Infrastructure only; capacity is unproven. Prices checked 2026-11-15; purchase conditions below apply.`
+      : `Cloudflare: ${totalText(cf.totals)}; WasmKeep: ${totalText(self.totals)}. Different currencies: no cheaper claim or crossover without an exchange rate. Prices checked 2026-11-15; purchase conditions below apply.`;
+    $("crossings").textContent = !allUsd ? "Currency panels show separate bill components, not comparable totals." : crosses.length
+      ? `Approximate changes of winner: ${crosses.map(c => `${times(c.x)} app size (${big(Math.round((base.req + base.msgs) * c.x / 30))} events/day)`).join("; ")}. Node and billing steps mean these are boundaries, not exact equal bills; the sweep may miss narrower intervals.`
+      : "No change of winner found in the sampled 0.001×–100× range. This is not a claim outside that range.";
+    const type = VPS[vps];
+    $("capacity").textContent = `${self.nodes.toLocaleString("en-US")} x ${type.name}: estimate from the three-node soak average (${type.rate.toFixed(1)} durable writes/s/node), ${type.resident.toLocaleString("en-US")} resident slots/node and 50,000 sockets/node. At least 3 nodes, with one node's spare capacity and 20% disk reserve. These are sizing assumptions, not measured capacity or automatic placement. ${vps !== "ovh2" ? "This VPS type was not soaked; its rate is an assumed equivalent (half for 2-vCPU plans). " : ""}Read traffic, application CPU, peaks and room fan-out still need load testing. Millions of actors and large fleets are unmeasured.`;
+    $("disk-note").textContent = `Disk: ${type.disk} GB/node; ${Math.round(w.gb).toLocaleString("en-US")} GB modeled across the fleet. Assumes even placement and enough space after one node fails. Each actor's entire SQLite database must fit on one node; WAL, snapshots, cache duplication, backups and skew need extra space. Cloudflare SQLite also limits an individual paid object to 10 GB (1 GB on Free). ${w.hot * 0.057 > 1 ? "Hot-actor warning: the entered burst rate exceeds one write per assumed 57 ms bucket trip today; adding nodes does not speed up a single actor." : ""}`;
+    $("bucket-counts").textContent = `Monthly bucket requests at this size: 0.4.2 ${big(Math.round(today.requests.put))} PUT; planned batching projection ${big(Math.round(projection.requests.put))} PUT. Both: ${big(Math.round(self.requests.list))} LIST and ${big(Math.round(self.requests.get))} GET. Estimated bucket upload reduction: ${times(projection.batchFactor)} for traffic writes only. Idle floor derives from 0.4.2 cadences, not a new measurement; heartbeat GETs grow with the square of node count. Restores, socket ownership checks, alarms and churn add requests.`;
+    $("batch-note").textContent = `Today: ${totalText(today.totals)}/month. Planned 0.5.0 projection: ${totalText(projection.totals)}/month. Assumes all writing events are eligible plain writes at ${w.hot} events/s per busy actor during bursts, one upload per 57 ms round trip (12-hour soak p50, not a fixed latency), plus the same 3% PUT overhead. No node reduction is assumed. Durable operations still wait; a plain response is not a durable acknowledgement. Low-rate actors do not benefit.`;
+    // Retain the original empirical envelope, even as the estimate buys nodes.
+    const rStar = writesOf(base) ? SOAK_WRITES_PER_S * MONTH_S / writesOf(base) : Infinity;
+    const charts = $("charts"); charts.replaceChildren();
     const usdSeries = [{ label: "Cloudflare", cf: true, ys: cfYs }];
-    if (curs.includes("USD") && selfUsd.some((y) => y > 0)) {
-      usdSeries.push({ label: allUsd ? "WasmKeep, self-hosted" : "WasmKeep, its US$ part", ys: selfUsd, beyond: rStar });
-    }
-    charts.append(panel("Monthly bill in US$", "USD", usdSeries, w, cross));
-    if (!allUsd) {
-      charts.append(panel("Monthly bill in euros", "EUR", [{ label: selfUsd.some((y) => y > 0) ? "WasmKeep, its euro part" : "WasmKeep, self-hosted", ys: selfEur, beyond: rStar }], w, null));
-    }
-
-    const table = $("sweep-table");
-    table.replaceChildren();
+    if (Object.hasOwn(self.totals, "USD")) usdSeries.push({ label: allUsd ? "WasmKeep estimate" : "WasmKeep US$ component only", ys: selfUsd, beyond: vps === "ovh2" ? rStar : 0 });
+    charts.append(panel("Monthly bill in US$", "USD", usdSeries, factor, crosses));
+    if (Object.hasOwn(self.totals, "EUR")) charts.append(panel("Monthly bill in euros", "EUR", [{ label: "WasmKeep EUR component only", ys: selfEur, beyond: 0 }], factor, []));
+    const table = $("sweep-table"); table.replaceChildren();
     const head = table.createTHead().insertRow();
-    for (const t of ["Your traffic", "Cloudflare (US$)", "Self-hosted (US$)", "Self-hosted (EUR)"]) {
-      const th = document.createElement("th");
-      th.scope = "col";
-      th.textContent = t;
-      head.append(th);
+    for (const text of ["App size", "Nodes", "Cloudflare (US$)", "WasmKeep (US$)", "WasmKeep (EUR)", "At this size, infrastructure only"]) {
+      const th = document.createElement("th"); th.scope = "col"; th.textContent = text; head.append(th);
     }
     const body = table.createTBody();
     for (let i = 0; i <= STEPS; i += 10) {
-      const r = body.insertRow();
-      for (const v of [times(sweepXs[i]), money(cfYs[i], "USD"), money(selfUsd[i], "USD"), money(selfEur[i], "EUR")]) {
-        r.insertCell().textContent = v;
-      }
+      const row = body.insertRow();
+      for (const text of [times(sweepXs[i]), fleet[i].nodes, money(cfYs[i], "USD"), Object.hasOwn(self.totals, "USD") ? money(selfUsd[i], "USD") : "—", Object.hasOwn(self.totals, "EUR") ? money(selfEur[i], "EUR") : "—", allUsd ? comparison(cfYs[i], selfUsd[i]) : "Currencies differ"]) row.insertCell().textContent = text;
     }
   };
 
@@ -423,13 +284,17 @@
     const p = PRESETS[name];
     for (const f of fields) form.elements[f].value = p.v[f];
     $("preset-note").textContent = p.note;
+    $("in-scale").value = 0;
     for (const b of root.querySelectorAll("[data-preset]")) b.setAttribute("aria-pressed", String(b.dataset.preset === name));
     render();
   };
 
   for (const b of root.querySelectorAll("[data-preset]")) b.addEventListener("click", () => apply(b.dataset.preset));
-  form.addEventListener("input", () => {
-    for (const b of root.querySelectorAll("[data-preset]")) b.setAttribute("aria-pressed", "false");
+  form.addEventListener("input", (event) => {
+    if (fields.includes(event.target.name)) {
+      for (const b of root.querySelectorAll("[data-preset]")) b.setAttribute("aria-pressed", "false");
+      $("preset-note").textContent = "Custom workload: the inputs below define the assumptions at 1×. Busy-actor rate describes bursts; daily/monthly volumes describe average traffic.";
+    }
     render();
   });
   form.addEventListener("submit", (e) => e.preventDefault());
@@ -444,5 +309,7 @@
       }
     }, 150);
   });
-  apply("api50");
+  $("in-scale").addEventListener("input", render);
+  $("in-batched").addEventListener("change", render);
+  apply("largeApi");
 })();

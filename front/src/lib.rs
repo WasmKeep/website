@@ -23,6 +23,7 @@ impl http::Guest for Front {
         let (path, query) = target.split_once('?').unwrap_or((&target, ""));
         let method = request.method();
         let response = match (&method, path) {
+            (Method::Get, "/api/wall/live") => wall::live(&request),
             (Method::Get | Method::Head, "/api/wall") => wall::list(),
             (Method::Post, p) if p.starts_with("/api/wall/") => {
                 wall::add(&request, &p["/api/wall/".len()..])
@@ -68,7 +69,7 @@ fn with_security_headers(mut response: actors::Response) -> actors::Response {
         ("referrer-policy", "strict-origin-when-cross-origin"),
         (
             "content-security-policy",
-            "default-src 'self'; img-src 'self' data:; object-src 'none'; \
+            "default-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; \
              base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
         ),
     ] {
