@@ -5,7 +5,7 @@
 # only for the sitemap and canonical links.
 base_url = "https://wasmkeep.dev"
 title = "WasmKeep"
-description = "Many small stateful actors, in any language that compiles to WebAssembly, on servers you own."
+description = "Stateful actors on your servers, in languages whose toolchains build WASI 0.2 components for WasmKeep's interfaces. SDK features vary by language."
 default_language = "en"
 compile_sass = true
 minify_html = true
@@ -46,7 +46,7 @@ menu = [
 
 # The WasmKeep release the site's install commands, numbers and example
 # links point at (the wall's components follow WASMKEEP_VERSION).
-release = "0.4.1"
+release = "0.4.2"
 # Files and examples of that release, on GitHub.
-tree = "https://github.com/WasmKeep/wasmkeep/tree/v0.4.1"
-blob = "https://github.com/WasmKeep/wasmkeep/blob/v0.4.1"
+tree = "https://github.com/WasmKeep/wasmkeep/tree/v0.4.2"
+blob = "https://github.com/WasmKeep/wasmkeep/blob/v0.4.2"

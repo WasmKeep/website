@@ -41,8 +41,13 @@ issuer="https://token.actions.githubusercontent.com"
 # listed in `missing` and left off the wall until a release carries it.
 declare -A asset_of=(
   [rust]=counter.wasm
+  [typescript]=counter-typescript.wasm
+  [python]=counter-python.wasm
+  [go]=counter-go.wasm
+  [c]=counter-c.wasm
+  [zig]=counter-zig.wasm
 )
-missing=(typescript python go c zig d moonbit csharp)
+missing=(d moonbit csharp)
 
 with_cli=0
 for arg in "$@"; do

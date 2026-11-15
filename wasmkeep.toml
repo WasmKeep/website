@@ -29,11 +29,27 @@ watch = [
 component = "components/rust-counter.wasm"
 access = "internal"
 
-# Not in a release yet; added when the main repository publishes them:
-# typescript, python, go, c, zig, d, moonbit, csharp.
-# [classes.typescript]
-# component = "components/typescript-counter.wasm"
-# access = "internal"
+[classes.typescript]
+component = "components/typescript-counter.wasm"
+access = "internal"
+
+[classes.python]
+component = "components/python-counter.wasm"
+access = "internal"
+
+[classes.go]
+component = "components/go-counter.wasm"
+access = "internal"
+
+[classes.c]
+component = "components/c-counter.wasm"
+access = "internal"
+
+[classes.zig]
+component = "components/zig-counter.wasm"
+access = "internal"
+
+# Not in the 0.4.2 release: d, moonbit, csharp.
 
 [dev]
 port = 8080

@@ -15,9 +15,14 @@
   const NODES = 3;
   const GB_PER_OBJECT = 128 / 1024; // Cloudflare bills 128 MB per active object
 
-  // Measured inputs (see "Assumptions" on the page).
+  // Measured writes; idle rates derived from 0.4.2's documented cadences,
+  // not yet re-measured (see "Assumptions" on the page).
   const PUT_PER_WRITE = 1.03;
-  const IDLE = { put: 0.334, list: 1.1, get: 1.67 }; // per node and second, idle
+  // Per node and second: three nodes, one app, no alarms or idle expiry.
+  // Lease PUT every 3 s; node LIST every 30 s, three intent LISTs and
+  // one alarm LIST every 60 s; heartbeat GETs, control/changed, and the
+  // app's version, tombstone and secrets GETs every 3 s.
+  const IDLE = { put: 1 / 3, list: 1 / 30 + 3 / 60 + 1 / 60, get: (NODES + 1 + 3) / 3 };
   // The highest rate of acknowledged durable writes among the soaks the
   // site cites: 643,891 in 10,804.5 s (648c2d1, 3 h); b849bfe carried
   // 53.4 a second, 0bf0547 52.3.
@@ -377,7 +382,7 @@
         }; bigger disks or servers are not in this bill.`,
       );
     }
-    notes.push(`Bucket requests: ${big(Math.round(self.requests.put))} PUT, ${big(Math.round(self.requests.list))} LIST, ${big(Math.round(self.requests.get))} GET a month.`);
+    notes.push(`Bucket requests: ${big(Math.round(self.requests.put))} PUT, ${big(Math.round(self.requests.list))} LIST, ${big(Math.round(self.requests.get))} GET a month. Idle floor derived from 0.4.2's documented cadences, not yet re-measured.`);
     $("capacity").textContent = notes.join(" ");
     if (perS > SOAK_WRITES_PER_S || w.gb > disk) {
       verdict.textContent += " The servers in this bill may not carry it: read the capacity and disk notes below the bills.";
